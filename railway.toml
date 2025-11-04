@@ -1,0 +1,23 @@
+# Railway configuration
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+# Environment variables (set these in Railway dashboard)
+# Required:
+# - SECRET_KEY
+# - OPENROUTER_API_KEY
+# - PLACID_API_KEY
+# - PUBLER_API_KEY
+# - PUBLER_WORKSPACE_ID
+# Automatically set by Railway:
+# - DATABASE_URL (PostgreSQL)
+# - REDIS_URL (Redis)
+# - PORT

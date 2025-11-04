@@ -1,0 +1,335 @@
+{% extends "client/base.html" %}
+
+{% block title %}Settings - {{ client.business_name }}{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Account Settings</h1>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <!-- Settings Navigation -->
+        <div class="lg:col-span-1">
+            <nav class="space-y-1">
+                <a href="#business-info" class="bg-purple-50 text-purple-700 group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                    <svg class="text-purple-500 mr-3 h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Business Info
+                </a>
+                <a href="#content-generation" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                    <svg class="text-gray-400 group-hover:text-gray-500 mr-3 h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    Content Generation
+                </a>
+                <a href="#content-preferences" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                    <svg class="text-gray-400 group-hover:text-gray-500 mr-3 h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Content Preferences
+                </a>
+            </nav>
+        </div>
+
+        <!-- Settings Forms -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Business Info -->
+            <div id="business-info" class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Business Information</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Business Name</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ client.business_name }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Industry</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ client.industry or 'Not specified' }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Location</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ client.city }}, {{ client.state }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Primary Contact</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ client.primary_contact_email }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Monthly Post Limit</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ client.monthly_post_limit }} posts/month</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Posts Used This Month</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ client.posts_this_month }} / {{ client.monthly_post_limit }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Generation Preference -->
+            <div id="content-generation" class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Content Creation Method</h3>
+                    <p class="text-sm text-gray-500 mb-6">Choose how you'd like to provide content for your social media posts</p>
+
+                    <div class="space-y-4">
+                        <!-- Own Media Option -->
+                        <label class="relative flex items-start p-4 cursor-pointer border-2 rounded-lg transition-colors hover:bg-gray-50 {% if client.content_generation_preference == 'own_media' or not client.content_generation_preference %}border-purple-500 bg-purple-50{% else %}border-gray-200{% endif %}">
+                            <input type="radio" name="content_preference" value="own_media"
+                                   {% if client.content_generation_preference == 'own_media' or not client.content_generation_preference %}checked{% endif %}
+                                   class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 mt-1"
+                                   onchange="updateContentPreference(this.value)">
+                            <div class="ml-3 flex-1">
+                                <span class="block text-sm font-medium text-gray-900">
+                                    📸 I'll upload my own photos/videos
+                                </span>
+                                <span class="block text-sm text-gray-500 mt-1">
+                                    Best if you have regular access to project photos and want full control over imagery. You'll upload media and we'll generate AI captions for you.
+                                </span>
+                            </div>
+                        </label>
+
+                        <!-- Auto-Generate Option -->
+                        <label class="relative flex items-start p-4 cursor-pointer border-2 rounded-lg transition-colors hover:bg-gray-50 {% if client.content_generation_preference == 'auto_generate' %}border-purple-500 bg-purple-50{% else %}border-gray-200{% endif %}">
+                            <input type="radio" name="content_preference" value="auto_generate"
+                                   {% if client.content_generation_preference == 'auto_generate' %}checked{% endif %}
+                                   class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 mt-1"
+                                   onchange="updateContentPreference(this.value)">
+                            <div class="ml-3 flex-1">
+                                <span class="block text-sm font-medium text-gray-900">
+                                    🤖 Auto-generate content for me
+                                </span>
+                                <span class="block text-sm text-gray-500 mt-1">
+                                    Perfect if you don't have regular photos or prefer a hands-off approach. We'll create complete posts with AI text and branded images automatically.
+                                </span>
+                            </div>
+                        </label>
+
+                        <!-- Mixed Option -->
+                        <label class="relative flex items-start p-4 cursor-pointer border-2 rounded-lg transition-colors hover:bg-gray-50 {% if client.content_generation_preference == 'mixed' %}border-purple-500 bg-purple-50{% else %}border-gray-200{% endif %}">
+                            <input type="radio" name="content_preference" value="mixed"
+                                   {% if client.content_generation_preference == 'mixed' %}checked{% endif %}
+                                   class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 mt-1"
+                                   onchange="updateContentPreference(this.value)">
+                            <div class="ml-3 flex-1">
+                                <span class="block text-sm font-medium text-gray-900">
+                                    🔀 Flexible approach
+                                </span>
+                                <span class="block text-sm text-gray-500 mt-1">
+                                    Upload media when you have it, otherwise we'll auto-generate. Best of both worlds with maximum flexibility on a per-post basis.
+                                </span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div id="preference-status" class="mt-4 hidden">
+                        <div class="rounded-md bg-green-50 p-4">
+                            <div class="flex">
+                                <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-green-800">
+                                        Preference updated successfully!
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Preferences Form -->
+            <div id="content-preferences" class="bg-white shadow rounded-lg">
+                <form action="/api/v1/client/settings/update" method="POST" class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Content Preferences</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="brand_voice" class="block text-sm font-medium text-gray-700 mb-2">
+                                Brand Voice / Tone Instructions
+                            </label>
+                            <textarea name="brand_voice" id="brand_voice" rows="4"
+                                      class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                      placeholder="Describe how you want your content to sound...">{{ client.brand_voice or '' }}</textarea>
+                            <p class="mt-1 text-xs text-gray-500">
+                                Example: "Friendly and approachable, focus on educating customers, avoid technical jargon"
+                            </p>
+                        </div>
+
+                        <div>
+                            <label for="promotions_offers" class="block text-sm font-medium text-gray-700 mb-2">
+                                Current Promotions & Offers
+                            </label>
+                            <textarea name="promotions_offers" id="promotions_offers" rows="3"
+                                      class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                      placeholder="List any current promotions or special offers...">{{ client.promotions_offers or '' }}</textarea>
+                            <p class="mt-1 text-xs text-gray-500">
+                                We'll incorporate these into your content when relevant
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Tone Preference
+                            </label>
+                            <p class="text-sm text-gray-900 capitalize">{{ client.tone_preference or 'professional' }}</p>
+                            <p class="mt-1 text-xs text-gray-500">
+                                Contact your account manager to change this setting
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Active Platforms
+                            </label>
+                            {% if client.platforms_enabled %}
+                            <div class="flex flex-wrap gap-2">
+                                {% for platform in client.platforms_enabled %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 capitalize">
+                                    {{ platform }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-sm text-gray-500">None configured</p>
+                            {% endif %}
+                            <p class="mt-1 text-xs text-gray-500">
+                                Contact your account manager to modify platforms
+                            </p>
+                        </div>
+
+                        <div class="pt-4">
+                            <button type="submit"
+                                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Account Info -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Account Information</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Account Created</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ client.created_at.strftime('%B %d, %Y') }}</p>
+                        </div>
+                        {% if client.last_login %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Last Login</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ client.last_login.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-purple-800">Need Help?</h3>
+                        <div class="mt-2 text-sm text-purple-700">
+                            <p>Contact your account manager for:</p>
+                            <ul class="list-disc pl-5 mt-1 space-y-1">
+                                <li>Changing your plan or post limit</li>
+                                <li>Adding or removing platforms</li>
+                                <li>Password reset</li>
+                                <li>Billing questions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateContentPreference(value) {
+    // Show loading state
+    const statusDiv = document.getElementById('preference-status');
+    statusDiv.classList.remove('hidden');
+    statusDiv.innerHTML = `
+        <div class="rounded-md bg-blue-50 p-4">
+            <div class="flex">
+                <svg class="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-blue-800">Updating preference...</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Send PATCH request to API
+    fetch('/api/v1/client/content-preference', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+        },
+        body: JSON.stringify({
+            content_generation_preference: value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Show success message
+        statusDiv.innerHTML = `
+            <div class="rounded-md bg-green-50 p-4">
+                <div class="flex">
+                    <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-green-800">
+                            ${data.message}
+                        </p>
+                        <p class="text-xs text-green-700 mt-1">${data.description}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Update border styles
+        document.querySelectorAll('label[class*="border-purple-500"]').forEach(label => {
+            label.classList.remove('border-purple-500', 'bg-purple-50');
+            label.classList.add('border-gray-200');
+        });
+        const selectedLabel = document.querySelector(`input[value="${value}"]`).closest('label');
+        selectedLabel.classList.add('border-purple-500', 'bg-purple-50');
+        selectedLabel.classList.remove('border-gray-200');
+
+        // Hide after 3 seconds
+        setTimeout(() => {
+            statusDiv.classList.add('hidden');
+        }, 3000);
+    })
+    .catch(error => {
+        statusDiv.innerHTML = `
+            <div class="rounded-md bg-red-50 p-4">
+                <div class="flex">
+                    <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-red-800">Failed to update preference. Please try again.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+}
+</script>
+{% endblock %}

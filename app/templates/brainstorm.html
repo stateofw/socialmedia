@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Content Ideas - Social Automation{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Content Ideas Generator</h1>
+        <p class="mt-2 text-sm text-gray-700">Get AI-powered content topic suggestions for your clients</p>
+    </div>
+
+    <!-- Generator Form -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Generate Ideas</h3>
+        <form id="brainstorm-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Client</label>
+                <select id="client-select" name="client_id" required
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">Choose a client...</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}"
+                            data-business="{{ client.business_name }}"
+                            data-industry="{{ client.industry }}"
+                            data-location="{{ client.city }}, {{ client.state }}"
+                            data-voice="{{ client.brand_voice or '' }}">
+                        {{ client.business_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Number of Ideas</label>
+                <select name="num_ideas"
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="5">5 ideas</option>
+                    <option value="10" selected>10 ideas</option>
+                    <option value="15">15 ideas</option>
+                    <option value="20">20 ideas</option>
+                </select>
+            </div>
+
+            <button type="submit"
+                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                Generate Content Ideas
+            </button>
+        </form>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+        <div class="flex items-center">
+            <svg class="animate-spin h-5 w-5 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm text-blue-800">Generating creative content ideas...</span>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="hidden">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">Generated Ideas</h2>
+            <button id="create-all-btn" class="hidden inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                Create All as Drafts
+            </button>
+        </div>
+
+        <div id="ideas-container" class="space-y-4">
+            <!-- Ideas will be inserted here -->
+        </div>
+    </div>
+
+    <!-- No Ideas State -->
+    <div id="empty-state" class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No ideas yet</h3>
+        <p class="mt-1 text-sm text-gray-500">Select a client and generate content ideas to get started</p>
+    </div>
+</div>
+
+<script>
+let selectedClient = null;
+let generatedIdeas = [];
+
+document.getElementById('client-select').addEventListener('change', function(e) {
+    const option = e.target.options[e.target.selectedIndex];
+    if (option.value) {
+        selectedClient = {
+            id: option.value,
+            business_name: option.dataset.business,
+            industry: option.dataset.industry,
+            location: option.dataset.location,
+            brand_voice: option.dataset.voice
+        };
+    } else {
+        selectedClient = null;
+    }
+});
+
+document.getElementById('brainstorm-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    if (!selectedClient) {
+        alert('Please select a client');
+        return;
+    }
+
+    const numIdeas = document.querySelector('[name="num_ideas"]').value;
+
+    // Show loading
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('empty-state').classList.add('hidden');
+
+    try {
+        const response = await fetch('/admin/brainstorm/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                client_id: selectedClient.id,
+                num_ideas: parseInt(numIdeas)
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to generate ideas');
+        }
+
+        const data = await response.json();
+        generatedIdeas = data.ideas;
+
+        // Hide loading
+        document.getElementById('loading').classList.add('hidden');
+
+        // Show results
+        displayIdeas(generatedIdeas);
+
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('loading').classList.add('hidden');
+        alert('Failed to generate ideas. Please try again.');
+    }
+});
+
+function displayIdeas(ideas) {
+    const container = document.getElementById('ideas-container');
+    container.innerHTML = '';
+
+    ideas.forEach((idea, index) => {
+        const ideaCard = document.createElement('div');
+        ideaCard.className = 'bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow';
+        ideaCard.innerHTML = `
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            ${idea.content_type.replace('_', ' ').toUpperCase()}
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">${idea.topic}</h3>
+                    <p class="text-sm text-gray-600 mb-4">${idea.description}</p>
+                </div>
+                <button onclick="createContent(${index})"
+                    class="ml-4 inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                    <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Create
+                </button>
+            </div>
+        `;
+        container.appendChild(ideaCard);
+    });
+
+    document.getElementById('results').classList.remove('hidden');
+    document.getElementById('create-all-btn').classList.remove('hidden');
+}
+
+async function createContent(index) {
+    const idea = generatedIdeas[index];
+
+    try {
+        const response = await fetch('/admin/brainstorm/create-content', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                client_id: selectedClient.id,
+                topic: idea.topic,
+                content_type: idea.content_type,
+                notes: idea.description
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            window.location.href = `/admin/content/${data.content_id}`;
+        } else {
+            alert('Failed to create content. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to create content. Please try again.');
+    }
+}
+
+document.getElementById('create-all-btn').addEventListener('click', async function() {
+    if (!confirm(`Create ${generatedIdeas.length} content drafts?`)) {
+        return;
+    }
+
+    let created = 0;
+    for (const idea of generatedIdeas) {
+        try {
+            await fetch('/admin/brainstorm/create-content', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    client_id: selectedClient.id,
+                    topic: idea.topic,
+                    content_type: idea.content_type,
+                    notes: idea.description
+                })
+            });
+            created++;
+        } catch (error) {
+            console.error('Error creating content:', error);
+        }
+    }
+
+    alert(`Created ${created} content drafts!`);
+    window.location.href = '/admin/dashboard';
+});
+</script>
+{% endblock %}

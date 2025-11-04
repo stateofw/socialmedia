@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Social Automation{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+        <p class="mt-2 text-sm text-gray-700">Track your content performance and engagement</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg p-4 mb-6">
+        <div class="flex items-center space-x-4">
+            <select
+                id="time-range"
+                class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="all">All time</option>
+            </select>
+
+            <select
+                id="client-filter"
+                class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                <option value="">All Clients</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}">{{ client.business_name }}</option>
+                {% endfor %}
+            </select>
+
+            <select
+                id="platform-filter"
+                class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                <option value="">All Platforms</option>
+                <option value="facebook">Facebook</option>
+                <option value="instagram">Instagram</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="google_business">Google Business</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+        <!-- Total Posts -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Posts</dt>
+                            <dd class="flex items-baseline">
+                                <div class="text-2xl font-semibold text-gray-900">{{ stats.total_posts }}</div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Published -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Published</dt>
+                            <dd class="flex items-baseline">
+                                <div class="text-2xl font-semibold text-gray-900">{{ stats.published_count }}</div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduled -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Scheduled</dt>
+                            <dd class="flex items-baseline">
+                                <div class="text-2xl font-semibold text-gray-900">{{ stats.scheduled_count }}</div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Avg Engagement Rate -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Avg Engagement</dt>
+                            <dd class="flex items-baseline">
+                                <div class="text-2xl font-semibold text-gray-900">{{ "%.1f"|format(stats.avg_engagement_rate) }}%</div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Posts by Platform -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Posts by Platform</h3>
+            <div class="space-y-3">
+                {% for platform, count in platform_stats.items() %}
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium text-gray-700 capitalize">{{ platform }}</span>
+                        <span class="text-sm text-gray-500">{{ count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ (count / stats.total_posts * 100) if stats.total_posts > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not platform_stats %}
+                <p class="text-sm text-gray-500">No platform data available</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Posts by Client -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Posts by Client</h3>
+            <div class="space-y-3">
+                {% for client_stat in client_stats[:5] %}
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium text-gray-700">{{ client_stat.name }}</span>
+                        <span class="text-sm text-gray-500">{{ client_stat.count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-purple-600 h-2 rounded-full" style="width: {{ (client_stat.count / stats.total_posts * 100) if stats.total_posts > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not client_stats %}
+                <p class="text-sm text-gray-500">No client data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Posts Timeline -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Publishing Timeline</h3>
+        <div class="h-64 flex items-end space-x-2">
+            {% for day in timeline %}
+            <div class="flex-1 flex flex-col items-center">
+                <div class="w-full bg-indigo-500 rounded-t hover:bg-indigo-600 transition-colors relative group"
+                     style="height: {{ (day.count / timeline_max * 100) if timeline_max > 0 else 0 }}%">
+                    <div class="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                        {{ day.count }} posts
+                    </div>
+                </div>
+                <span class="text-xs text-gray-500 mt-2">{{ day.date }}</span>
+            </div>
+            {% endfor %}
+            {% if not timeline %}
+            <div class="w-full text-center text-gray-500">
+                No timeline data available
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Top Performing Posts -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Posts</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Platforms</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Published</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for post in recent_posts %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {{ post.client_name }}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-700">
+                            {{ post.topic }}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            <div class="flex space-x-1">
+                                {% for platform in post.platforms %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+                                    {{ platform }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {% if post.published_at %}
+                            {{ post.published_at.strftime('%b %d, %Y') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if post.status == 'published' %}bg-green-100 text-green-800
+                                {% elif post.status == 'scheduled' %}bg-blue-100 text-blue-800
+                                {% elif post.status == 'pending_approval' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ post.status.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not recent_posts %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">
+                            No posts found
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Filter change handlers
+document.getElementById('time-range').addEventListener('change', reloadAnalytics);
+document.getElementById('client-filter').addEventListener('change', reloadAnalytics);
+document.getElementById('platform-filter').addEventListener('change', reloadAnalytics);
+
+function reloadAnalytics() {
+    const timeRange = document.getElementById('time-range').value;
+    const clientId = document.getElementById('client-filter').value;
+    const platform = document.getElementById('platform-filter').value;
+
+    const params = new URLSearchParams();
+    if (timeRange) params.append('days', timeRange);
+    if (clientId) params.append('client_id', clientId);
+    if (platform) params.append('platform', platform);
+
+    window.location.href = `/admin/analytics?${params.toString()}`;
+}
+</script>
+{% endblock %}

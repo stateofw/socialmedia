@@ -1,0 +1,62 @@
+{% extends "client/base.html" %}
+
+{% block title %}Content - {{ client.business_name }}{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Your Content</h1>
+        <div class="flex space-x-2">
+            <a href="/api/v1/client/content" class="px-3 py-2 text-sm font-medium rounded-md {% if not status_filter %}bg-purple-100 text-purple-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}">All</a>
+            <a href="/api/v1/client/content?status=polished" class="px-3 py-2 text-sm font-medium rounded-md {% if status_filter == 'polished' %}bg-yellow-100 text-yellow-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}">Pending</a>
+            <a href="/api/v1/client/content?status=approved" class="px-3 py-2 text-sm font-medium rounded-md {% if status_filter == 'approved' %}bg-blue-100 text-blue-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}">Approved</a>
+            <a href="/api/v1/client/content?status=published" class="px-3 py-2 text-sm font-medium rounded-md {% if status_filter == 'published' %}bg-green-100 text-green-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}">Published</a>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        {% if content_list %}
+        <ul class="divide-y divide-gray-200">
+            {% for content in content_list %}
+            <li class="hover:bg-gray-50 transition-colors">
+                <a href="/api/v1/client/content/{{ content.id }}" class="block px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">
+                                {{ content.caption[:100] if content.caption else 'No caption yet' }}...
+                            </p>
+                            <div class="mt-2 flex items-center text-sm text-gray-500">
+                                <span>{{ content.created_at.strftime('%b %d, %Y') }}</span>
+                                {% if content.scheduled_at %}
+                                <span class="mx-2">•</span>
+                                <span>Scheduled: {{ content.scheduled_at.strftime('%b %d at %I:%M %p') }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="ml-4 flex-shrink-0">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                                {% if content.status == 'published' %}bg-green-100 text-green-800
+                                {% elif content.status == 'approved' %}bg-blue-100 text-blue-800
+                                {% elif content.status == 'polished' %}bg-yellow-100 text-yellow-800
+                                {% elif content.status == 'rejected' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ content.status }}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No content found</h3>
+            <p class="mt-1 text-sm text-gray-500">Try changing your filter or check back later.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}Create Content - Social Automation{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="mb-4">
+            <a href="/admin/dashboard" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
+        <h1 class="text-2xl font-semibold text-gray-900">Create New Content</h1>
+        <p class="mt-2 text-sm text-gray-700">Create social media posts and blog articles with AI</p>
+    </div>
+
+    <!-- Main Form -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Form -->
+        <div class="lg:col-span-2">
+            <form id="content-form" class="bg-white shadow rounded-lg p-6 space-y-6">
+                <!-- Client Selection -->
+                <div>
+                    <label for="client_id" class="block text-sm font-medium text-gray-700">
+                        Client <span class="text-red-500">*</span>
+                    </label>
+                    <select id="client_id" name="client_id" required
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Select a client...</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}"
+                                data-business="{{ client.business_name }}"
+                                data-industry="{{ client.industry or '' }}"
+                                data-location="{{ client.city }}, {{ client.state }}"
+                                data-platforms='{{ client.platforms_enabled | tojson }}'
+                                data-voice="{{ client.brand_voice or '' }}">
+                            {{ client.business_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Content Type -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="content_type" class="block text-sm font-medium text-gray-700">
+                            Content Type <span class="text-red-500">*</span>
+                        </label>
+                        <select id="content_type" name="content_type" required
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="tip">Tip/Advice</option>
+                            <option value="offer">Offer/Promotion</option>
+                            <option value="question">Question/Engagement</option>
+                            <option value="announcement">Announcement</option>
+                            <option value="testimonial">Testimonial/Review</option>
+                            <option value="behind_scenes">Behind the Scenes</option>
+                            <option value="educational">Educational</option>
+                            <option value="seasonal">Seasonal/Holiday</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="focus_location" class="block text-sm font-medium text-gray-700">
+                            Focus Location
+                        </label>
+                        <input type="text" id="focus_location" name="focus_location"
+                            placeholder="e.g., Austin, TX or leave blank"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <p class="mt-1 text-xs text-gray-500">Optional: Override client's default location</p>
+                    </div>
+                </div>
+
+                <!-- Topic -->
+                <div>
+                    <label for="topic" class="block text-sm font-medium text-gray-700">
+                        Topic <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="topic" name="topic" required
+                        placeholder="e.g., 5 Ways to Save on Energy Bills This Winter"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <p class="mt-1 text-xs text-gray-500">What is this post about? Be specific.</p>
+                </div>
+
+                <!-- Notes/Instructions -->
+                <div>
+                    <label for="notes" class="block text-sm font-medium text-gray-700">
+                        Additional Notes/Instructions
+                    </label>
+                    <textarea id="notes" name="notes" rows="4"
+                        placeholder="Any specific details, tone preferences, or special instructions for the AI..."
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+
+                <!-- What to Generate -->
+                <div class="border-t pt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">What would you like to generate?</label>
+
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="generate_social" name="generate_social" type="checkbox" checked
+                                    class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3">
+                                <label for="generate_social" class="font-medium text-gray-700">Social Media Post</label>
+                                <p class="text-sm text-gray-500">Generate caption, hashtags, and CTA for social platforms</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="generate_blog" name="generate_blog" type="checkbox"
+                                    class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3">
+                                <label for="generate_blog" class="font-medium text-gray-700">Blog Article</label>
+                                <p class="text-sm text-gray-500">Generate full blog post (600-800 words) with SEO optimization</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="auto_approve" name="auto_approve" type="checkbox"
+                                    class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3">
+                                <label for="auto_approve" class="font-medium text-gray-700">Auto-approve & Schedule</label>
+                                <p class="text-sm text-gray-500">Skip review and schedule for immediate posting</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="flex justify-end space-x-3 pt-6 border-t">
+                    <a href="/admin/dashboard"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit" id="submit-btn"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Create Content
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right Column: Preview/Info -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Client Info -->
+            <div id="client-info" class="hidden bg-white shadow rounded-lg p-6">
+                <h3 class="text-sm font-medium text-gray-900 mb-4">Selected Client</h3>
+                <dl class="space-y-2">
+                    <div>
+                        <dt class="text-xs text-gray-500">Business</dt>
+                        <dd id="client-business" class="text-sm font-medium text-gray-900"></dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-500">Industry</dt>
+                        <dd id="client-industry" class="text-sm text-gray-700"></dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-500">Location</dt>
+                        <dd id="client-location" class="text-sm text-gray-700"></dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-500">Platforms</dt>
+                        <dd id="client-platforms" class="flex flex-wrap gap-1 mt-1"></dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Tips -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-blue-900 mb-2">💡 Tips for Better Content</h3>
+                <ul class="text-xs text-blue-800 space-y-1">
+                    <li>• Be specific in your topic</li>
+                    <li>• Include numbers when relevant (5 Ways, 3 Tips, etc.)</li>
+                    <li>• Mention seasonal or timely context</li>
+                    <li>• Add special instructions in notes</li>
+                    <li>• Check both if you want blog + social</li>
+                </ul>
+            </div>
+
+            <!-- Generation Info -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-gray-900 mb-2">What happens next?</h3>
+                <ol class="text-xs text-gray-700 space-y-2 list-decimal list-inside">
+                    <li>Content created as draft</li>
+                    <li>AI generates in background (~10 seconds)</li>
+                    <li>You'll see it in dashboard</li>
+                    <li>Review, edit if needed</li>
+                    <li>Approve to publish</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <div id="success-message" class="hidden fixed bottom-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg max-w-md">
+        <div class="flex">
+            <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm font-medium text-green-800" id="success-text"></p>
+                <p class="text-xs text-green-700 mt-1">Redirecting to content...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedClientData = null;
+
+// Client selection handler
+document.getElementById('client_id').addEventListener('change', function(e) {
+    const option = e.target.options[e.target.selectedIndex];
+
+    if (option.value) {
+        selectedClientData = {
+            id: option.value,
+            business_name: option.dataset.business,
+            industry: option.dataset.industry || 'Not specified',
+            location: option.dataset.location,
+            platforms: JSON.parse(option.dataset.platforms || '[]'),
+            brand_voice: option.dataset.voice
+        };
+
+        // Update client info panel
+        document.getElementById('client-info').classList.remove('hidden');
+        document.getElementById('client-business').textContent = selectedClientData.business_name;
+        document.getElementById('client-industry').textContent = selectedClientData.industry;
+        document.getElementById('client-location').textContent = selectedClientData.location;
+
+        // Update platforms
+        const platformsContainer = document.getElementById('client-platforms');
+        platformsContainer.innerHTML = '';
+        if (selectedClientData.platforms.length > 0) {
+            selectedClientData.platforms.forEach(platform => {
+                const badge = document.createElement('span');
+                badge.className = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800';
+                badge.textContent = platform;
+                platformsContainer.appendChild(badge);
+            });
+        } else {
+            platformsContainer.innerHTML = '<span class="text-xs text-gray-500">No platforms configured</span>';
+        }
+
+        // Auto-fill focus location
+        if (!document.getElementById('focus_location').value) {
+            document.getElementById('focus_location').value = selectedClientData.location;
+        }
+    } else {
+        document.getElementById('client-info').classList.add('hidden');
+        selectedClientData = null;
+    }
+});
+
+// Form submission
+document.getElementById('content-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const submitBtn = document.getElementById('submit-btn');
+
+    // Validate
+    if (!formData.get('client_id')) {
+        alert('Please select a client');
+        return;
+    }
+
+    if (!formData.get('topic')) {
+        alert('Please enter a topic');
+        return;
+    }
+
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Creating...';
+
+    try {
+        const payload = {
+            client_id: parseInt(formData.get('client_id')),
+            topic: formData.get('topic'),
+            content_type: formData.get('content_type'),
+            focus_location: formData.get('focus_location') || null,
+            notes: formData.get('notes') || null,
+            generate_blog: formData.get('generate_blog') === 'on',
+            auto_approve: formData.get('auto_approve') === 'on'
+        };
+
+        const response = await fetch('/admin/content/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Show success message
+            document.getElementById('success-text').textContent = 'Content created successfully!';
+            document.getElementById('success-message').classList.remove('hidden');
+
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                window.location.href = `/admin/content/${result.content_id}`;
+            }, 2000);
+        } else {
+            alert(result.detail || 'Failed to create content');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Create Content';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Create Content';
+    }
+});
+</script>
+{% endblock %}

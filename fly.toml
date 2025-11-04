@@ -1,0 +1,45 @@
+# Fly.io configuration
+app = "social-automation-saas"
+primary_region = "iad"  # Change to your preferred region
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  ENV = "production"
+  DEBUG = "False"
+  API_V1_PREFIX = "/api/v1"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/health"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+# Persistent volume for media files
+[[mounts]]
+  source = "media_data"
+  destination = "/app/media"
+
+# Set environment variables:
+# fly secrets set SECRET_KEY=xxx
+# fly secrets set OPENROUTER_API_KEY=xxx
+# fly secrets set PLACID_API_KEY=xxx
+# fly secrets set PUBLER_API_KEY=xxx
+# fly secrets set PUBLER_WORKSPACE_ID=xxx
+# fly secrets set DATABASE_URL=xxx (from Fly Postgres)
+# fly secrets set REDIS_URL=xxx (from external Redis like Upstash)

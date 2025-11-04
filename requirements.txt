@@ -1,0 +1,59 @@
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+
+# Task Queue
+celery==5.5.3
+redis==7.0.1
+
+# AI & APIs
+openai==2.6.1
+anthropic==0.7.1
+
+# Social Media APIs
+facebook-sdk==3.1.0
+google-api-python-client==2.108.0
+google-auth-httplib2==0.1.1
+google-auth-oauthlib==1.1.0
+
+# WordPress
+python-wordpress-xmlrpc==2.3
+requests==2.31.0
+
+# File Storage
+boto3==1.29.7
+python-magic==0.4.27
+pillow==10.1.0
+
+# Security & Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt<5.0  # Version 4.x required for passlib compatibility
+python-dotenv==1.0.0
+python-multipart==0.0.6
+
+# Validation
+pydantic==2.5.0
+pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# Templates (HTMX)
+jinja2==3.1.2
+
+# Utilities
+httpx==0.25.1
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+ruff==0.1.6

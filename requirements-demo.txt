@@ -1,0 +1,35 @@
+# Minimal requirements for local demo with SQLite
+# Using latest compatible versions for Python 3.13
+
+# Core Framework
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Database - SQLite
+sqlalchemy
+aiosqlite
+
+# AI & APIs (optional)
+# openai
+
+# Social Media APIs (optional for demo)
+requests
+
+# Security & Auth
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+
+# Validation
+pydantic
+pydantic-settings
+email-validator
+
+# Templates (HTMX)
+jinja2
+
+# Utilities
+httpx
+python-dateutil
+pytz

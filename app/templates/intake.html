@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Submission - {{ client.business_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div class="sm:mx-auto sm:w-full sm:max-w-2xl">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">{{ client.business_name }}</h1>
+                <p class="mt-2 text-sm text-gray-600">Submit your content ideas for this month</p>
+                <div class="mt-4 inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
+                    <svg class="h-5 w-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-sm text-blue-700">
+                        <strong>{{ client.posts_remaining }}</strong> of {{ client.monthly_post_limit }} posts remaining this month
+                    </span>
+                </div>
+            </div>
+
+            <!-- Success Message (hidden by default) -->
+            <div id="success-message" class="hidden mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex">
+                    <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-green-800">Content submitted successfully!</h3>
+                        <p class="mt-1 text-sm text-green-700">We'll generate your post and send it for review shortly.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Message (hidden by default) -->
+            <div id="error-message" class="hidden mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex">
+                    <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Error submitting content</h3>
+                        <p class="mt-1 text-sm text-red-700" id="error-text"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+                <form id="intake-form" class="space-y-6">
+                    <!-- Content Creation Notice -->
+                    <div class="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mb-6">
+                        <div class="flex">
+                            <svg class="h-5 w-5 text-purple-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                            <div class="ml-3 flex-1">
+                                <h3 class="text-sm font-medium text-purple-900">📸 Simple Content Submission</h3>
+                                <p class="mt-1 text-sm text-purple-700">
+                                    <strong>Just upload images!</strong> Our team will analyze your photos and create professional social media posts for you. No need to write anything.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Topic -->
+                    <div>
+                        <label for="topic" class="block text-sm font-medium text-gray-700">
+                            What's this post about? <span class="text-gray-400">(Optional if uploading images)</span>
+                        </label>
+                        <input type="text" name="topic" id="topic"
+                            placeholder="e.g., Before & After project, Customer testimonial, Special offer"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <p class="mt-1 text-xs text-gray-500">Leave blank and our team will create from your images</p>
+                    </div>
+
+                    <!-- Content Type -->
+                    <div>
+                        <label for="content_type" class="block text-sm font-medium text-gray-700">
+                            Post Type <span class="text-gray-400">(Optional - we'll determine this)</span>
+                        </label>
+                        <select name="content_type" id="content_type"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">We'll determine from your images...</option>
+                            <option value="before_after">Before & After</option>
+                            <option value="testimonial">Customer Testimonial</option>
+                            <option value="offer">Special Offer / Promotion</option>
+                            <option value="tip">Industry Tip / Advice</option>
+                            <option value="project_showcase" selected>Recent Project Showcase</option>
+                            <option value="behind_scenes">Behind the Scenes</option>
+                            <option value="announcement">Company Announcement</option>
+                            <option value="educational">Educational Content</option>
+                            <option value="seasonal">Seasonal / Holiday Post</option>
+                        </select>
+                    </div>
+
+                    <!-- Focus Location -->
+                    <div>
+                        <label for="focus_location" class="block text-sm font-medium text-gray-700">
+                            Focus Town / Area <span class="text-gray-400">(Optional)</span>
+                        </label>
+                        <input type="text" name="focus_location" id="focus_location"
+                            value="{{ client.service_area }}"
+                            placeholder="e.g., Brewster, NY or Putnam County"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <p class="mt-1 text-sm text-gray-500">Defaults to {{ client.service_area }}</p>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div>
+                        <label for="media" class="block text-sm font-medium text-gray-700">
+                            Upload Photos or Videos (Optional)
+                        </label>
+                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-indigo-400 transition-colors">
+                            <div class="space-y-1 text-center">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <div class="flex text-sm text-gray-600">
+                                    <label for="media" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none">
+                                        <span>Upload files</span>
+                                        <input id="media" name="media" type="file" multiple accept="image/*,video/*" class="sr-only">
+                                    </label>
+                                    <p class="pl-1">or drag and drop</p>
+                                </div>
+                                <p class="text-xs text-gray-500">PNG, JPG, GIF, MP4 up to 10MB</p>
+                            </div>
+                        </div>
+                        <div id="file-list" class="mt-2 space-y-1"></div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-700">
+                            Notes or Special Instructions (Optional)
+                        </label>
+                        <textarea name="notes" id="notes" rows="4"
+                            placeholder="Any specific details you want to include? Special messaging? Hashtags to avoid?"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div>
+                        <button type="submit" id="submit-btn"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                            <span id="submit-text">Submit Content</span>
+                            <svg id="submit-spinner" class="hidden animate-spin ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Info Box -->
+                <div class="mt-6 bg-blue-50 rounded-lg p-4">
+                    <div class="flex">
+                        <svg class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-blue-800">What happens next?</h3>
+                            <div class="mt-2 text-sm text-blue-700">
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li><strong>If you upload images:</strong> Our team analyzes them to understand what you're showcasing</li>
+                                    <li>We create an expert-level post customized for your business</li>
+                                    <li>We optimize it for each platform (Facebook, Instagram, etc.)</li>
+                                    <li>You'll receive the post for review and approval</li>
+                                    <li>Once approved, we schedule it to go live on your social media</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('intake-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const submitText = document.getElementById('submit-text');
+        const submitSpinner = document.getElementById('submit-spinner');
+        const successMessage = document.getElementById('success-message');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const fileInput = document.getElementById('media');
+        const fileList = document.getElementById('file-list');
+
+        let uploadedMediaUrls = [];
+
+        // File upload preview and automatic upload
+        fileInput.addEventListener('change', async function(e) {
+            fileList.innerHTML = '';
+            uploadedMediaUrls = []; // Reset
+
+            if (e.target.files.length > 0) {
+                // Show uploading message
+                const uploadingDiv = document.createElement('div');
+                uploadingDiv.className = 'text-sm text-blue-600';
+                uploadingDiv.innerHTML = '⏳ Uploading files...';
+                fileList.appendChild(uploadingDiv);
+
+                try {
+                    // Upload files immediately
+                    const formData = new FormData();
+                    Array.from(e.target.files).forEach(file => {
+                        formData.append('files', file);
+                    });
+
+                    // Extract intake token from URL
+                    const intakeToken = window.location.pathname.split('/').pop();
+
+                    const uploadResponse = await fetch(`/api/v1/upload/${intakeToken}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!uploadResponse.ok) {
+                        throw new Error('Upload failed');
+                    }
+
+                    const uploadData = await uploadResponse.json();
+                    uploadedMediaUrls = uploadData.media_urls;
+
+                    // Clear uploading message
+                    fileList.innerHTML = '';
+
+                    // Show uploaded files
+                    Array.from(e.target.files).forEach((file, index) => {
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'flex items-center text-sm text-green-600';
+                        fileItem.innerHTML = `
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) - Uploaded ✓
+                        `;
+                        fileList.appendChild(fileItem);
+                    });
+                } catch (error) {
+                    fileList.innerHTML = '';
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-sm text-red-600';
+                    errorDiv.innerHTML = '❌ Upload failed. Please try again.';
+                    fileList.appendChild(errorDiv);
+                    console.error('Upload error:', error);
+                }
+            }
+        });
+
+        // Form submission
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Hide previous messages
+            successMessage.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+
+            // Validate: either topic or images must be provided
+            const topic = document.getElementById('topic').value.trim();
+            const hasFiles = fileInput.files && fileInput.files.length > 0;
+
+            if (!topic && !hasFiles) {
+                errorText.textContent = 'Please provide either a topic or upload at least one image';
+                errorMessage.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitText.textContent = hasFiles && !topic ? 'Analyzing images...' : 'Submitting...';
+            submitSpinner.classList.remove('hidden');
+
+            // Prepare form data with uploaded media URLs
+            const formData = {
+                topic: topic || null,
+                content_type: document.getElementById('content_type').value || null,
+                focus_location: document.getElementById('focus_location').value || null,
+                notes: document.getElementById('notes').value || null,
+                auto_post: false,  // Always require approval
+                media_urls: uploadedMediaUrls  // Use uploaded file URLs
+            };
+
+            try {
+                // Submit to API
+                const response = await fetch(window.location.pathname + '/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Show success message
+                    successMessage.classList.remove('hidden');
+
+                    // Reset form
+                    form.reset();
+                    fileList.innerHTML = '';
+
+                    // Scroll to top
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    // Show error message
+                    errorText.textContent = data.detail || 'An error occurred. Please try again.';
+                    errorMessage.classList.remove('hidden');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (error) {
+                // Show error message
+                errorText.textContent = 'Network error. Please check your connection and try again.';
+                errorMessage.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitText.textContent = 'Submit Content';
+                submitSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

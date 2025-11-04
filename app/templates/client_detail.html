@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}{{ client.business_name }} - Client Details{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="mb-4">
+            <a href="/admin/clients" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to Clients
+            </a>
+        </div>
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900">{{ client.business_name }}</h1>
+                <p class="mt-1 text-sm text-gray-500">{{ client.industry }} • {{ client.city }}, {{ client.state }}</p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {% if client.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {% if client.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <div id="success-message" class="hidden mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+        <div class="flex">
+            <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="ml-3 text-sm text-green-800" id="success-text"></p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Client Info -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Basic Information Card -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Client Information</h2>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Business Name</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ client.business_name }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Industry</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ client.industry or 'Not specified' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Location</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ client.city }}, {{ client.state }}</dd>
+                    </div>
+                    {% if client.service_area %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Service Area</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ client.service_area }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if client.website_url %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Website</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            <a href="{{ client.website_url }}" target="_blank" class="text-indigo-600 hover:text-indigo-900">
+                                {{ client.website_url }}
+                            </a>
+                        </dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Monthly Post Limit</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ client.monthly_post_limit }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Auto-posting</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if client.auto_post %}
+                                <span class="text-green-600">Enabled</span>
+                            {% else %}
+                                <span class="text-gray-600">Disabled</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Platforms Card -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Social Platforms</h2>
+                {% if client.platforms_enabled %}
+                <div class="flex flex-wrap gap-2">
+                    {% for platform in client.platforms_enabled %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {{ platform }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500">No platforms configured</p>
+                {% endif %}
+            </div>
+
+            {% if client.brand_voice %}
+            <!-- Brand Voice Card -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Brand Voice</h2>
+                <p class="text-sm text-gray-700">{{ client.brand_voice }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column: WordPress Integration -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- WordPress Connection Card -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-medium text-gray-900">WordPress Integration</h2>
+                        <p class="mt-1 text-sm text-gray-500">Connect this client's WordPress site to enable blog posting</p>
+                    </div>
+                    {% if wordpress_connected %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        <svg class="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        Connected
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                        Not Connected
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- How to Get WordPress Credentials -->
+                <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 class="text-sm font-medium text-blue-900 mb-2">How to get WordPress credentials:</h3>
+                    <ol class="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                        <li>Log in to the client's WordPress admin dashboard</li>
+                        <li>Go to <strong>Users → Profile</strong></li>
+                        <li>Scroll to <strong>Application Passwords</strong> section</li>
+                        <li>Enter name: "Social Automation" and click <strong>Add New Application Password</strong></li>
+                        <li>Copy the generated password (format: xxxx xxxx xxxx xxxx)</li>
+                        <li>Paste it below along with the WordPress username and site URL</li>
+                    </ol>
+                </div>
+
+                <!-- WordPress Connection Form -->
+                <form id="wordpress-form" class="space-y-4">
+                    <div>
+                        <label for="site_url" class="block text-sm font-medium text-gray-700">
+                            WordPress Site URL <span class="text-red-500">*</span>
+                        </label>
+                        <input type="url" name="site_url" id="site_url" required
+                            value="{{ wordpress_config.site_url if wordpress_config else '' }}"
+                            placeholder="https://clientwebsite.com"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <p class="mt-1 text-xs text-gray-500">The full URL of the WordPress site (e.g., https://example.com)</p>
+                    </div>
+
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700">
+                            WordPress Username <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="username" id="username" required
+                            value="{{ wordpress_config.username if wordpress_config else '' }}"
+                            placeholder="admin"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <p class="mt-1 text-xs text-gray-500">WordPress admin username</p>
+                    </div>
+
+                    <div>
+                        <label for="app_password" class="block text-sm font-medium text-gray-700">
+                            Application Password <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="app_password" id="app_password"
+                            {% if not wordpress_connected %}required{% endif %}
+                            placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm">
+                        <p class="mt-1 text-xs text-gray-500">
+                            {% if wordpress_connected %}
+                            Leave blank to keep existing password, or enter new password to update
+                            {% else %}
+                            Application password from WordPress (not your regular password!)
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input id="test_connection" name="test_connection" type="checkbox" checked
+                                class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="test_connection" class="font-medium text-gray-700">Test connection before saving</label>
+                            <p class="text-gray-500">Verify credentials work before storing them</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t">
+                        {% if wordpress_connected %}
+                        <button type="button" onclick="disconnectWordPress()" class="text-sm font-medium text-red-600 hover:text-red-700">
+                            Disconnect WordPress
+                        </button>
+                        {% else %}
+                        <div></div>
+                        {% endif %}
+                        <div class="flex space-x-3">
+                            <button type="button" onclick="testWordPressConnection()"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                                Test Connection
+                            </button>
+                            <button type="submit"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Save WordPress Settings
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Recent Content -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Recent Content</h2>
+                {% if recent_content %}
+                <div class="space-y-3">
+                    {% for content in recent_content %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900">{{ content.topic }}</p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                {{ content.status.value }} • {{ content.created_at.strftime('%b %d, %Y') }}
+                            </p>
+                        </div>
+                        <a href="/admin/content/{{ content.id }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-900">
+                            View →
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500">No content created yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Save WordPress settings
+document.getElementById('wordpress-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const data = {
+        site_url: formData.get('site_url'),
+        username: formData.get('username'),
+        app_password: formData.get('app_password'),
+        test_connection: formData.get('test_connection') === 'on'
+    };
+
+    try {
+        const response = await fetch('/admin/clients/{{ client.id }}/wordpress', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showSuccess(result.message || 'WordPress settings saved successfully!');
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showError(result.detail || 'Failed to save WordPress settings');
+        }
+    } catch (error) {
+        showError('An error occurred. Please try again.');
+    }
+});
+
+// Test WordPress connection
+async function testWordPressConnection() {
+    const siteUrl = document.getElementById('site_url').value;
+    const username = document.getElementById('username').value;
+    const appPassword = document.getElementById('app_password').value;
+
+    if (!siteUrl || !username || !appPassword) {
+        showError('Please fill in all fields before testing');
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/clients/{{ client.id }}/wordpress/test', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                site_url: siteUrl,
+                username: username,
+                app_password: appPassword
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showSuccess('✅ Connection successful! WordPress is accessible.');
+        } else {
+            showError(result.detail || 'Connection failed. Check your credentials.');
+        }
+    } catch (error) {
+        showError('Connection test failed. Please verify the site URL is correct.');
+    }
+}
+
+// Disconnect WordPress
+async function disconnectWordPress() {
+    if (!confirm('Are you sure you want to disconnect WordPress for this client?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/clients/{{ client.id }}/wordpress', {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            showSuccess('WordPress disconnected successfully');
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showError('Failed to disconnect WordPress');
+        }
+    } catch (error) {
+        showError('An error occurred');
+    }
+}
+
+function showSuccess(message) {
+    const successDiv = document.getElementById('success-message');
+    const successText = document.getElementById('success-text');
+    successText.textContent = message;
+    successDiv.classList.remove('hidden', 'bg-red-50', 'border-red-200');
+    successDiv.classList.add('bg-green-50', 'border-green-200');
+    successDiv.querySelector('svg').classList.remove('text-red-400');
+    successDiv.querySelector('svg').classList.add('text-green-400');
+    successDiv.querySelector('p').classList.remove('text-red-800');
+    successDiv.querySelector('p').classList.add('text-green-800');
+
+    setTimeout(() => successDiv.classList.add('hidden'), 5000);
+}
+
+function showError(message) {
+    const successDiv = document.getElementById('success-message');
+    const successText = document.getElementById('success-text');
+    successText.textContent = message;
+    successDiv.classList.remove('hidden', 'bg-green-50', 'border-green-200');
+    successDiv.classList.add('bg-red-50', 'border-red-200');
+    successDiv.querySelector('svg').classList.remove('text-green-400');
+    successDiv.querySelector('svg').classList.add('text-red-400');
+    successDiv.querySelector('p').classList.remove('text-green-800');
+    successDiv.querySelector('p').classList.add('text-red-800');
+
+    setTimeout(() => successDiv.classList.add('hidden'), 5000);
+}
+</script>
+{% endblock %}
