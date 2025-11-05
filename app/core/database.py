@@ -7,25 +7,19 @@ database_url = settings.DATABASE_URL
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-# asyncpg doesn't accept sslmode parameter, remove it and handle SSL properly
+# Remove sslmode parameter - Fly.io internal connections don't need SSL
 import re
-import ssl
 database_url = re.sub(r'[?&]sslmode=[^&]*', '', database_url)
 # Clean up any trailing ? or & from URL
 database_url = re.sub(r'[?&]$', '', database_url)
 
-# Create SSL context that doesn't verify certificates (for Fly.io internal connections)
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
-
-# Create async engine with SSL configuration
+# Create async engine without SSL for Fly.io internal connections
 engine = create_async_engine(
     database_url,
     echo=settings.DEBUG,
     future=True,
     connect_args={
-        "ssl": ssl_context
+        "ssl": False  # Disable SSL for Fly.io internal network
     }
 )
 
