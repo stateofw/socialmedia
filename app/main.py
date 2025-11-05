@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import init_db
 from app.api import api_router
-from app.api.routes import admin, signup
+from app.api.routes import admin, signup, client_ui
 
 
 @asynccontextmanager
@@ -48,6 +48,9 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 # Include admin UI routes
 app.include_router(admin.router, prefix="/admin", tags=["admin-ui"])
+
+# Include client UI routes
+app.include_router(client_ui.router, prefix="/client", tags=["client-ui"])
 
 # Include public signup routes
 app.include_router(signup.router, prefix="/signup", tags=["signup"])
