@@ -13,6 +13,7 @@ from app.core.security import create_access_token, verify_password
 from app.models.user import User
 from app.models.client import Client
 from app.models.content import Content, ContentStatus
+from app.models.client_signup import ClientSignup
 
 
 class CaptionUpdate(BaseModel):
@@ -1532,3 +1533,134 @@ async def generate_content_with_options(
             content.error_message = str(e)
             await db.commit()
             print(f"❌ Failed to generate content for {content_id}: {str(e)}")
+
+
+@router.get("/signups", response_class=HTMLResponse)
+async def signups_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Show pending client signups page."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/admin/login")
+
+    # Get pending signups
+    signups_result = await db.execute(
+        select(ClientSignup)
+        .where(ClientSignup.status == "pending")
+        .order_by(ClientSignup.created_at.desc())
+    )
+    signups = signups_result.scalars().all()
+
+    # Format for template
+    signups_list = []
+    for signup in signups:
+        signups_list.append({
+            "id": signup.id,
+            "business_name": signup.business_name,
+            "email": signup.email,
+            "contact_person_name": signup.contact_person_name or "N/A",
+            "business_industry": ", ".join(signup.business_industry) if signup.business_industry else "N/A",
+            "preferred_platforms": ", ".join(signup.preferred_platforms) if signup.preferred_platforms else "N/A",
+            "created_at": signup.created_at.strftime("%b %d, %Y %I:%M %p") if signup.created_at else "N/A",
+            "media_count": len(signup.media_urls) if signup.media_urls else 0,
+        })
+
+    return templates.TemplateResponse(
+        "signups.html",
+        {
+            "request": request,
+            "user": user,
+            "signups": signups_list,
+        },
+    )
+
+
+@router.get("/signups/{signup_id}", response_class=HTMLResponse)
+async def signup_detail(
+    signup_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Show detailed view of a signup request."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/admin/login")
+
+    # Get signup
+    result = await db.execute(
+        select(ClientSignup).where(ClientSignup.id == signup_id)
+    )
+    signup = result.scalar_one_or_none()
+
+    if not signup:
+        raise HTTPException(status_code=404, detail="Signup not found")
+
+    return templates.TemplateResponse(
+        "signup_detail.html",
+        {
+            "request": request,
+            "user": user,
+            "signup": signup,
+        },
+    )
+
+
+@router.post("/signups/{signup_id}/approve")
+async def approve_signup(
+    signup_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve a signup and redirect to create client page (admin creates client manually)."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/admin/login")
+
+    # Update signup status
+    result = await db.execute(
+        select(ClientSignup).where(ClientSignup.id == signup_id)
+    )
+    signup = result.scalar_one_or_none()
+
+    if not signup:
+        raise HTTPException(status_code=404, detail="Signup not found")
+
+    signup.status = "approved"
+    signup.reviewed_at = datetime.utcnow()
+    await db.commit()
+
+    # Redirect to signups page with success message
+    return RedirectResponse(url="/admin/signups", status_code=303)
+
+
+@router.post("/signups/{signup_id}/reject")
+async def reject_signup(
+    signup_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reject a signup request."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/admin/login")
+
+    # Update signup status
+    result = await db.execute(
+        select(ClientSignup).where(ClientSignup.id == signup_id)
+    )
+    signup = result.scalar_one_or_none()
+
+    if not signup:
+        raise HTTPException(status_code=404, detail="Signup not found")
+
+    signup.status = "rejected"
+    signup.reviewed_at = datetime.utcnow()
+    await db.commit()
+
+    return RedirectResponse(url="/admin/signups", status_code=303)

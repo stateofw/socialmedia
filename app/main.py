@@ -6,12 +6,15 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import init_db
 from app.api import api_router
-from app.api.routes import admin
+from app.api.routes import admin, signup
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan events for the application."""
+    # Import models to ensure they're registered with Base
+    from app import models  # noqa: F401
+
     # Startup: Initialize database
     await init_db()
     print("✅ Database initialized")
@@ -45,6 +48,9 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 # Include admin UI routes
 app.include_router(admin.router, prefix="/admin", tags=["admin-ui"])
+
+# Include public signup routes
+app.include_router(signup.router, prefix="/signup", tags=["signup"])
 
 
 @app.get("/")
