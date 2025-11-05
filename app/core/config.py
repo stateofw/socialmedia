@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # OpenAI
-    OPENAI_API_KEY: str
+    OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = "gpt-4-turbo-preview"
 
     # OpenRouter (Alternative AI provider)
