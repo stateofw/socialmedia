@@ -1,12 +1,17 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
 from app.api import api_router
 from app.api.routes import admin, signup, client_ui
+
+# Templates
+templates = Jinja2Templates(directory="app/templates")
 
 
 @asynccontextmanager
@@ -56,14 +61,10 @@ app.include_router(client_ui.router, prefix="/client", tags=["client-ui"])
 app.include_router(signup.router, prefix="/signup", tags=["signup"])
 
 
-@app.get("/")
-async def root():
-    """Root endpoint."""
-    return {
-        "message": f"Welcome to {settings.APP_NAME}",
-        "version": "1.0.0",
-        "docs": "/docs",
-    }
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """Landing page."""
+    return templates.TemplateResponse("landing.html", {"request": request})
 
 
 @app.get("/health")
