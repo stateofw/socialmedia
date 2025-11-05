@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Signup Detail - {{ signup.business_name }}{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="/admin/signups" class="text-indigo-600 hover:text-indigo-800 flex items-center">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Signups
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-white shadow-sm rounded-lg p-6 mb-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ signup.business_name }}</h1>
+                <p class="mt-1 text-sm text-gray-600">Submitted on {{ signup.created_at.strftime('%B %d, %Y at %I:%M %p') if signup.created_at else 'N/A' }}</p>
+            </div>
+            <div class="flex gap-3">
+                <form action="/admin/signups/{{ signup.id }}/approve" method="post">
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">
+                        Approve
+                    </button>
+                </form>
+                <form action="/admin/signups/{{ signup.id }}/reject" method="post">
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium">
+                        Reject
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Contact Information -->
+        <div class="bg-white shadow-sm rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Contact Information</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Email</label>
+                    <p class="text-gray-900">{{ signup.email }}</p>
+                </div>
+                {% if signup.contact_person_name %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Contact Person</label>
+                    <p class="text-gray-900">{{ signup.contact_person_name }}</p>
+                </div>
+                {% endif %}
+                {% if signup.contact_person_email %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Contact Email</label>
+                    <p class="text-gray-900">{{ signup.contact_person_email }}</p>
+                </div>
+                {% endif %}
+                {% if signup.contact_person_phone %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Phone</label>
+                    <p class="text-gray-900">{{ signup.contact_person_phone }}</p>
+                </div>
+                {% endif %}
+                {% if signup.business_website %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Website</label>
+                    <p class="text-gray-900">
+                        <a href="{{ signup.business_website }}" target="_blank" class="text-indigo-600 hover:text-indigo-800">
+                            {{ signup.business_website }}
+                        </a>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Business Information -->
+        <div class="bg-white shadow-sm rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Business Information</h2>
+            <div class="space-y-3">
+                {% if signup.business_industry %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Industry</label>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        {% for industry in signup.business_industry %}
+                        <span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                            {{ industry }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if signup.preferred_platforms %}
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Preferred Platforms</label>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        {% for platform in signup.preferred_platforms %}
+                        <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                            {{ platform }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Notes -->
+    {% if signup.additional_notes %}
+    <div class="bg-white shadow-sm rounded-lg p-6 mt-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Additional Notes</h2>
+        <p class="text-gray-700 whitespace-pre-wrap">{{ signup.additional_notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Media Files -->
+    {% if signup.media_urls %}
+    <div class="bg-white shadow-sm rounded-lg p-6 mt-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Sample Media ({{ signup.media_urls|length }} file{% if signup.media_urls|length > 1 %}s{% endif %})</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {% for media_url in signup.media_urls %}
+            <div class="relative group">
+                <img src="{{ media_url }}" alt="Sample media" class="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                <a href="{{ media_url }}" target="_blank" class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-all">
+                    <svg class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white shadow-sm rounded-lg p-6 mt-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Sample Media</h2>
+        <p class="text-gray-500 italic">No media files uploaded</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
