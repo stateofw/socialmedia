@@ -59,9 +59,12 @@ class Settings(BaseSettings):
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
 
-    # Placid (image generation)
+    # Placid (image generation - primary)
     PLACID_API_KEY: str | None = None
     PLACID_TEMPLATE_ID: str | None = None
+
+    # Fal AI (image generation - backup)
+    FAL_API_KEY: str | None = None
 
     # Publer (social media publishing)
     PUBLER_API_KEY: str | None = None

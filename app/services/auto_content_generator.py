@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.services.ai import ai_service
-from app.services.placid import placid_service
+from app.services.image_generator import image_generator
 from app.services.content_polisher import content_polisher
 from app.models.client import Client
 from app.models.content import Content, ContentType
@@ -217,22 +217,22 @@ class AutoContentGenerator:
             if polished and polished.get("polished_caption"):
                 caption = polished["polished_caption"]
 
-        # Generate branded image with Placid
-        print(f"🎨 Generating Placid image for: {topic}")
-        placid_url = await placid_service.generate_social_post_image(
+        # Generate branded image (Placid with Fal AI backup)
+        print(f"🎨 Generating image for: {topic}")
+        image_url = await image_generator.generate_post_image(
             title=topic,
             business_name=client.business_name,
             subtitle=caption[:100] if caption else None,  # First 100 chars as subtitle
             industry=client.industry,
-            client_template_id=client.placid_template_id,  # Use client-specific template
+            client_placid_template=client.placid_template_id,  # Use client-specific template
         )
 
         media_urls = []
-        if placid_url:
-            media_urls = [placid_url]
-            print(f"✅ Placid image generated: {placid_url}")
+        if image_url:
+            media_urls = [image_url]
+            print(f"✅ Image generated: {image_url}")
         else:
-            print(f"⚠️ Placid image generation skipped (not configured or failed)")
+            print(f"⚠️ Image generation failed (no providers configured)")
 
         return {
             "topic": topic,
