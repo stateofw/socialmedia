@@ -4,11 +4,10 @@ Run this ONCE on your database
 """
 import asyncio
 from sqlalchemy import text
-from app.core.database import get_db_engine
+from app.core.database import engine
 
 async def run_migration():
     """Add email column to clients table"""
-    engine = get_db_engine()
 
     async with engine.begin() as conn:
         # Check if column already exists

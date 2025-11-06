@@ -219,8 +219,18 @@ async def approve_content_htmx(
 
     content, client = row
 
+    # Check monthly limit before approval
+    if client.posts_this_month >= client.monthly_post_limit:
+        return HTMLResponse(
+            '<div class="text-red-600 text-sm">❌ Client has reached monthly post limit</div>',
+            status_code=400
+        )
+
     # Update status
     content.status = ContentStatus.APPROVED
+    
+    # Increment monthly counter
+    client.posts_this_month += 1
 
     await db.commit()
 
