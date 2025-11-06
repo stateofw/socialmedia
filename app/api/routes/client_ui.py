@@ -164,6 +164,9 @@ async def client_dashboard(
             "client": client,
             "stats": stats,
             "recent_content": recent_content,
+            "pending_approval": pending_count,  # Template expects this
+            "scheduled_posts": scheduled_count,  # Template might expect this too
+            "recent_posts": published_count,  # Template might expect this too
         },
     )
 
