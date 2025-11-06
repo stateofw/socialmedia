@@ -998,10 +998,18 @@ async def generate_ideas(
     from app.services.ai import ai_service
 
     try:
+        # Build location string safely
+        location_parts = []
+        if client.city:
+            location_parts.append(client.city)
+        if client.state:
+            location_parts.append(client.state)
+        location = ", ".join(location_parts) if location_parts else "local area"
+
         ideas = await ai_service.generate_content_ideas(
             business_name=client.business_name,
             industry=client.industry or "local business",
-            location=f"{client.city}, {client.state}",
+            location=location,
             brand_voice=client.brand_voice,
             num_ideas=brainstorm_request.num_ideas,
         )
@@ -1009,6 +1017,9 @@ async def generate_ideas(
         return {"ideas": ideas}
 
     except Exception as e:
+        print(f"❌ Failed to generate ideas: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to generate ideas: {str(e)}")
 
 
