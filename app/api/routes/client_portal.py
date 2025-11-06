@@ -38,19 +38,37 @@ async def get_current_client_from_cookie(request: Request, db: AsyncSession):
     
     token = request.cookies.get("client_access_token")
     if not token:
+        print("⚠️ No client_access_token cookie found")
         return None
     
     try:
         payload = decode_access_token(token)
+        if not payload:
+            print("⚠️ Failed to decode token")
+            return None
+            
         client_id = payload.get("client_id")
         if not client_id:
+            print(f"⚠️ No client_id in payload: {payload}")
             return None
+        
+        print(f"✅ Decoded client_id from token: {client_id}")
         
         result = await db.execute(
             select(Client).where(Client.id == int(client_id))
         )
-        return result.scalar_one_or_none()
-    except:
+        client = result.scalar_one_or_none()
+        
+        if client:
+            print(f"✅ Found client: {client.business_name}")
+        else:
+            print(f"⚠️ No client found with id: {client_id}")
+        
+        return client
+    except Exception as e:
+        print(f"❌ Error in get_current_client_from_cookie: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
