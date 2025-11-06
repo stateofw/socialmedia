@@ -1522,6 +1522,29 @@ async def generate_content_with_options(
                 except Exception as e:
                     print(f"⚠️ Failed to generate blog: {e}")
 
+            # Generate image automatically
+            try:
+                from app.services.image_generator import image_generator
+                
+                print(f"🎨 Generating image for content {content_id}...")
+                image_url = await image_generator.generate_image(
+                    topic=content.topic,
+                    business_name=client.business_name,
+                    industry=client.industry or "local business",
+                    template_id=client.placid_template_id,
+                )
+                
+                if image_url:
+                    content.media_urls = [image_url]
+                    content.featured_image_url = image_url
+                    print(f"✅ Image generated: {image_url}")
+                else:
+                    print(f"⚠️ No image generated, proceeding without image")
+                    
+            except Exception as e:
+                print(f"⚠️ Image generation failed, continuing without image: {e}")
+                # Continue without image - not a critical failure
+
             # Set status
             if auto_approve:
                 content.status = ContentStatus.APPROVED
