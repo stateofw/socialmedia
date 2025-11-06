@@ -353,6 +353,37 @@ async def create_client(
     )
 
 
+# IMPORTANT: /content/new must come BEFORE /content/{content_id} to avoid route conflicts
+@router.get("/content/new", response_class=HTMLResponse)
+async def new_content_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Show create content page."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/admin/login")
+
+    # Get all active clients for dropdown
+    clients_result = await db.execute(
+        select(Client)
+        .where(Client.owner_id == user.id)
+        .where(Client.is_active == True)
+        .order_by(Client.business_name)
+    )
+    clients = clients_result.scalars().all()
+
+    return templates.TemplateResponse(
+        "content_create.html",
+        {
+            "request": request,
+            "user": user,
+            "clients": clients,
+        },
+    )
+
+
 @router.get("/content/{content_id}", response_class=HTMLResponse)
 async def content_detail_page(
     content_id: int,
@@ -1346,36 +1377,6 @@ async def disconnect_wordpress(
         await db.commit()
 
     return {"success": True, "message": "WordPress disconnected successfully"}
-
-
-@router.get("/content/new", response_class=HTMLResponse)
-async def new_content_page(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    """Show create content page."""
-
-    user = await get_current_user_from_cookie(request, db)
-    if not user:
-        return RedirectResponse(url="/admin/login")
-
-    # Get all active clients for dropdown
-    clients_result = await db.execute(
-        select(Client)
-        .where(Client.owner_id == user.id)
-        .where(Client.is_active == True)
-        .order_by(Client.business_name)
-    )
-    clients = clients_result.scalars().all()
-
-    return templates.TemplateResponse(
-        "content_create.html",
-        {
-            "request": request,
-            "user": user,
-            "clients": clients,
-        },
-    )
 
 
 @router.post("/content/create")
