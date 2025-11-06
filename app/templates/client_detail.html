@@ -160,6 +160,59 @@
 
         <!-- Right Column: WordPress Integration -->
         <div class="lg:col-span-2 space-y-6">
+            <!-- Integration Settings Card -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Integration Settings</h2>
+                <p class="text-sm text-gray-500 mb-6">Configure Publer workspace and Placid template for this client</p>
+                
+                <form id="settings-form" class="space-y-4">
+                    <div>
+                        <label for="publer_workspace_id" class="block text-sm font-medium text-gray-700">
+                            Publer Workspace ID
+                        </label>
+                        <input type="text" name="publer_workspace_id" id="publer_workspace_id"
+                            value="{{ client.publer_workspace_id or '' }}"
+                            placeholder="e.g., 12345"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-mono">
+                        <p class="mt-1 text-xs text-gray-500">
+                            Leave blank to use default workspace. Get this from Publer settings → Workspace → ID
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="placid_template_id" class="block text-sm font-medium text-gray-700">
+                            Placid Template ID
+                        </label>
+                        <input type="text" name="placid_template_id" id="placid_template_id"
+                            value="{{ client.placid_template_id or '' }}"
+                            placeholder="e.g., abc123def456"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-mono">
+                        <p class="mt-1 text-xs text-gray-500">
+                            Client-specific Placid template for auto-generated images. Leave blank to use default.
+                        </p>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input id="auto_post" name="auto_post" type="checkbox" 
+                                {% if client.auto_post %}checked{% endif %}
+                                class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="auto_post" class="font-medium text-gray-700">Auto-post without approval</label>
+                            <p class="text-gray-500">Skip admin review and publish directly to Publer</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end pt-4 border-t">
+                        <button type="submit"
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             <!-- WordPress Connection Card -->
             <div class="bg-white shadow rounded-lg p-6">
                 <div class="flex items-center justify-between mb-6">
@@ -342,6 +395,36 @@
 </div>
 
 <script>
+// Save integration settings
+document.getElementById('settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = {
+        publer_workspace_id: document.getElementById('publer_workspace_id').value || null,
+        placid_template_id: document.getElementById('placid_template_id').value || null,
+        auto_post: document.getElementById('auto_post').checked
+    };
+
+    try {
+        const response = await fetch('/admin/clients/{{ client.id }}/settings', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showSuccess('Settings saved successfully!');
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showError(result.detail || 'Failed to save settings');
+        }
+    } catch (error) {
+        showError('An error occurred while saving settings');
+    }
+});
+
 // Save WordPress settings
 document.getElementById('wordpress-form').addEventListener('submit', async (e) => {
     e.preventDefault();

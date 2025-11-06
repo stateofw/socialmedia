@@ -128,7 +128,7 @@ class ClientSetPassword(BaseModel):
 
 class ClientLogin(BaseModel):
     """Schema for client login."""
-    business_name: str = Field(..., min_length=1)
+    email: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
 
 

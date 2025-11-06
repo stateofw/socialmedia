@@ -113,19 +113,19 @@ async def client_login(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Client portal login with business name and password.
+    Client portal login with email and password.
     Returns JWT token with client_id claim.
     """
-    # Find client by business name
+    # Find client by email
     result = await db.execute(
-        select(Client).where(Client.business_name == login_data.business_name)
+        select(Client).where(Client.email == login_data.email.lower())
     )
     client = result.scalar_one_or_none()
 
     if not client:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid business name or password",
+            detail="Invalid email or password",
         )
 
     # Check if password is set
@@ -139,7 +139,7 @@ async def client_login(
     if not verify_password(login_data.password, client.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid business name or password",
+            detail="Invalid email or password",
         )
 
     # Check if client is active

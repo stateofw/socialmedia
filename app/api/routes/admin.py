@@ -282,6 +282,7 @@ async def new_client_page(
 async def create_client(
     request: Request,
     business_name: str = Form(...),
+    email: str = Form(...),
     industry: str = Form(...),
     city: str = Form(...),
     state: str = Form(...),
@@ -308,6 +309,7 @@ async def create_client(
     client = Client(
         owner_id=user.id,
         business_name=business_name,
+        email=email.lower(),  # Store email in lowercase for consistent lookups
         industry=industry,
         city=city,
         state=state,
@@ -1735,3 +1737,55 @@ async def set_client_password(
     await db.commit()
 
     return {"success": True, "message": "Client portal password set successfully!"}
+
+
+
+class ClientSettingsUpdate(BaseModel):
+    publer_workspace_id: Optional[str] = None
+    placid_template_id: Optional[str] = None
+    auto_post: Optional[bool] = None
+
+
+@router.patch("/clients/{client_id}/settings")
+async def update_client_settings(
+    client_id: int,
+    settings: ClientSettingsUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update client integration settings (Publer workspace, Placid template, auto-post)."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(status_code=401)
+
+    # Verify client ownership
+    client_result = await db.execute(
+        select(Client)
+        .where(Client.id == client_id)
+        .where(Client.owner_id == user.id)
+    )
+    client = client_result.scalar_one_or_none()
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Update fields
+    if settings.publer_workspace_id is not None:
+        client.publer_workspace_id = settings.publer_workspace_id if settings.publer_workspace_id else None
+    
+    if settings.placid_template_id is not None:
+        client.placid_template_id = settings.placid_template_id if settings.placid_template_id else None
+    
+    if settings.auto_post is not None:
+        client.auto_post = settings.auto_post
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": "Client settings updated successfully!",
+        "publer_workspace_id": client.publer_workspace_id,
+        "placid_template_id": client.placid_template_id,
+        "auto_post": client.auto_post
+    }

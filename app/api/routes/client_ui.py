@@ -50,22 +50,22 @@ async def client_login_page(request: Request):
 @router.post("/login")
 async def client_login_submit(
     request: Request,
-    business_name: str = Form(...),
+    email: str = Form(...),
     password: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
     """Process client login form."""
 
-    # Find client by business name
+    # Find client by email
     result = await db.execute(
-        select(Client).where(Client.business_name == business_name)
+        select(Client).where(Client.email == email.lower())
     )
     client = result.scalar_one_or_none()
 
     if not client:
         return templates.TemplateResponse(
             "client/login.html",
-            {"request": request, "error": "Invalid business name or password"},
+            {"request": request, "error": "Invalid email or password"},
         )
 
     # Check if password is set
@@ -79,7 +79,7 @@ async def client_login_submit(
     if not verify_password(password, client.password_hash):
         return templates.TemplateResponse(
             "client/login.html",
-            {"request": request, "error": "Invalid business name or password"},
+            {"request": request, "error": "Invalid email or password"},
         )
 
     if not client.is_active:
