@@ -1666,6 +1666,7 @@ async def approve_signup(
     # Create Client from signup data
     new_client = Client(
         business_name=signup.business_name,
+        email=signup.email,  # Main email for login
         industry=signup.business_industry[0] if signup.business_industry else None,
         website_url=signup.business_website,
         platforms_enabled=signup.preferred_platforms or [],
