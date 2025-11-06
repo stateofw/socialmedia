@@ -1667,6 +1667,8 @@ async def approve_signup(
         primary_contact_name=signup.contact_person_name,
         primary_contact_email=signup.contact_person_email or signup.email,
         primary_contact_phone=signup.contact_person_phone,
+        # Copy password from signup (client set their own password during signup)
+        password_hash=signup.password_hash,
     )
     
     db.add(new_client)

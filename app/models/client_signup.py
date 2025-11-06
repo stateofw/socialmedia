@@ -26,6 +26,9 @@ class ClientSignup(Base):
     # Media files
     media_urls = Column(JSON)  # List of uploaded media URLs
 
+    # Client Portal Password
+    password_hash = Column(String)  # Hashed password for client portal (set during signup)
+
     # Status tracking
     status = Column(String, default="pending")  # pending, approved, rejected, onboarded
     admin_notes = Column(Text)  # Internal notes from admin

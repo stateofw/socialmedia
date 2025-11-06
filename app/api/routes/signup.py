@@ -27,6 +27,7 @@ class ClientSignupRequest(BaseModel):
     """Schema for client signup request."""
     email: EmailStr
     business_name: str
+    password: str  # Client-chosen password for portal access
     contact_person_name: Optional[str] = None
     contact_person_email: Optional[EmailStr] = None
     contact_person_phone: Optional[str] = None
@@ -124,10 +125,15 @@ async def submit_signup(
             detail="A signup request with this business name or email already exists. Please contact support if you need assistance."
         )
 
+    # Hash the password
+    from app.core.security import get_password_hash
+    hashed_password = get_password_hash(signup_data.password)
+
     # Create signup record
     signup = ClientSignup(
         email=signup_data.email,
         business_name=signup_data.business_name,
+        password_hash=hashed_password,  # Store hashed password
         contact_person_name=signup_data.contact_person_name,
         contact_person_email=signup_data.contact_person_email,
         contact_person_phone=signup_data.contact_person_phone,
