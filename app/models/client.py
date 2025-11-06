@@ -14,6 +14,7 @@ class Client(Base):
 
     # Basic Info
     business_name = Column(String, nullable=False, index=True)
+    email = Column(String, unique=True, index=True)  # Client email for login
     industry = Column(String)  # e.g., "landscaping", "HVAC", "roofing"
     website_url = Column(String)
 

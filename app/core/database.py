@@ -1,26 +1,53 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+from urllib.parse import urlparse, parse_qs
+import re
 from app.core.config import settings
 
-# Fix DATABASE_URL - convert postgres:// to postgresql+asyncpg:// and handle SSL mode
+# Normalize DATABASE_URL to asyncpg dialect
 database_url = settings.DATABASE_URL
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif database_url.startswith("postgresql://") and not database_url.startswith("postgresql+asyncpg://"):
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# Remove sslmode parameter - Fly.io internal connections don't need SSL
-import re
-database_url = re.sub(r'[?&]sslmode=[^&]*', '', database_url)
-# Clean up any trailing ? or & from URL
-database_url = re.sub(r'[?&]$', '', database_url)
+# Decide SSL behavior:
+# - Disable SSL for Fly.io internal Postgres (".internal" host)
+# - Disable SSL for obvious local/dev hosts (localhost, 127.0.0.1, docker service "db")
+# - Otherwise enable SSL for public/managed endpoints
+parsed = urlparse(database_url)
+host = (parsed.hostname or "").lower()
+query = parse_qs(parsed.query)
 
-# Create async engine without SSL for Fly.io internal connections
+# Respect explicit URL flag if present (e.g., ?ssl=true/false)
+explicit_ssl = None
+if "ssl" in query:
+    val = (query.get("ssl", [""])[0] or "").lower()
+    explicit_ssl = val in ("1", "true", "t", "yes", "y", "on", "require")
+
+internal_hosts = (
+    host.endswith(".internal")
+    or host in {"localhost", "127.0.0.1", "::1", "db"}
+)
+
+if explicit_ssl is not None:
+    use_ssl = explicit_ssl
+else:
+    # Default: production => enable SSL unless internal; non-prod => disable unless explicitly requested
+    if settings.ENV.lower() == "production":
+        use_ssl = not internal_hosts
+    else:
+        use_ssl = False
+
+# Create async engine with conditional SSL
+connect_args = {"ssl": use_ssl}
+
 engine = create_async_engine(
-    database_url,
+    # Remove unsupported psycopg-style sslmode param for asyncpg
+    re.sub(r"[?&]sslmode=[^&]*", "", database_url).rstrip("?&"),
     echo=settings.DEBUG,
     future=True,
-    connect_args={
-        "ssl": False  # Disable SSL for Fly.io internal network
-    }
+    connect_args=connect_args,
 )
 
 # Create session factory

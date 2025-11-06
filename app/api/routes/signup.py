@@ -108,13 +108,14 @@ async def submit_signup(
     Submit client signup request.
     Creates a pending signup that admin must review and approve.
     """
-    # Check if business name or email already exists in signups
+    # Check if business name or email already exists in PENDING signups only
+    # (Exclude "onboarded" and "rejected" - those can sign up again)
     existing_signup = await db.execute(
         select(ClientSignup).where(
             (ClientSignup.business_name == signup_data.business_name) |
             (ClientSignup.email == signup_data.email)
         ).where(
-            ClientSignup.status.in_(["pending", "approved"])
+            ClientSignup.status == "pending"  # Only check pending signups
         )
     )
     if existing_signup.scalar_one_or_none():

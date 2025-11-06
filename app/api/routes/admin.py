@@ -7,6 +7,7 @@ from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel
 from typing import List
+import secrets
 
 from app.core.database import get_db
 from app.core.security import create_access_token, verify_password
@@ -290,6 +291,7 @@ async def create_client(
     auto_post: bool = Form(False),
     brand_voice: str = Form(None),
     platforms: list = Form([]),
+    publer_workspace_id: str = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new client."""
@@ -315,6 +317,7 @@ async def create_client(
         auto_post=auto_post,
         brand_voice=brand_voice,
         platforms_enabled=platforms if platforms else [],
+        publer_workspace_id=publer_workspace_id,
         intake_token=intake_token,
         is_active=True,
     )
@@ -1615,13 +1618,13 @@ async def approve_signup(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Approve a signup and redirect to create client page (admin creates client manually)."""
+    """Approve a signup and automatically create a Client."""
 
     user = await get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/admin/login")
 
-    # Update signup status
+    # Get signup
     result = await db.execute(
         select(ClientSignup).where(ClientSignup.id == signup_id)
     )
@@ -1630,12 +1633,43 @@ async def approve_signup(
     if not signup:
         raise HTTPException(status_code=404, detail="Signup not found")
 
-    signup.status = "approved"
-    signup.reviewed_at = datetime.utcnow()
-    await db.commit()
+    # Check if already approved and client created
+    if signup.status == "onboarded" and signup.onboarded_client_id:
+        return RedirectResponse(url=f"/admin/clients/{signup.onboarded_client_id}", status_code=303)
 
-    # Redirect to signups page with success message
-    return RedirectResponse(url="/admin/signups", status_code=303)
+    # Generate unique intake token
+    intake_token = secrets.token_urlsafe(32)
+
+    # Create Client from signup data
+    new_client = Client(
+        business_name=signup.business_name,
+        industry=signup.business_industry[0] if signup.business_industry else None,
+        website_url=signup.business_website,
+        platforms_enabled=signup.preferred_platforms or [],
+        intake_token=intake_token,
+        owner_id=user.id,
+        is_active=True,
+        monthly_post_limit=8,  # Default
+        auto_post=False,
+        # Contact info
+        primary_contact_name=signup.contact_person_name,
+        primary_contact_email=signup.contact_person_email or signup.email,
+        primary_contact_phone=signup.contact_person_phone,
+    )
+    
+    db.add(new_client)
+    await db.flush()  # Get the client.id
+
+    # Update signup status
+    signup.status = "onboarded"
+    signup.reviewed_at = datetime.utcnow()
+    signup.onboarded_client_id = new_client.id
+
+    await db.commit()
+    await db.refresh(new_client)
+
+    # Redirect to the new client's detail page
+    return RedirectResponse(url=f"/admin/clients/{new_client.id}", status_code=303)
 
 
 @router.post("/signups/{signup_id}/reject")
@@ -1664,3 +1698,40 @@ async def reject_signup(
     await db.commit()
 
     return RedirectResponse(url="/admin/signups", status_code=303)
+
+
+class SetPasswordRequest(BaseModel):
+    password: str
+
+
+@router.post("/clients/{client_id}/set-password")
+async def set_client_password(
+    client_id: int,
+    password_request: SetPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Set or reset client portal password."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(status_code=401)
+
+    # Verify client ownership
+    client_result = await db.execute(
+        select(Client)
+        .where(Client.id == client_id)
+        .where(Client.owner_id == user.id)
+    )
+    client = client_result.scalar_one_or_none()
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Hash and set password
+    from app.core.security import get_password_hash
+
+    client.password_hash = get_password_hash(password_request.password)
+    await db.commit()
+
+    return {"success": True, "message": "Client portal password set successfully!"}

@@ -5,7 +5,9 @@ Authenticated routes for clients to access their own data only.
 Clients log in with business_name + password and can view/manage their content.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from datetime import datetime
@@ -22,11 +24,87 @@ from app.schemas.user import Token
 from app.schemas.content import ContentResponse
 
 router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
 
 
 class ContentPreferenceUpdate(BaseModel):
     """Schema for updating content generation preference."""
     content_generation_preference: str  # own_media, auto_generate, or mixed
+
+
+async def get_current_client_from_cookie(request: Request, db: AsyncSession):
+    """Get client from session cookie"""
+    client_id = request.cookies.get("client_id")
+    if not client_id:
+        return None
+    
+    result = await db.execute(
+        select(Client).where(Client.id == int(client_id))
+    )
+    return result.scalar_one_or_none()
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
+async def client_dashboard_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Client portal dashboard page"""
+    client = await get_current_client_from_cookie(request, db)
+    if not client:
+        return RedirectResponse(url="/client/login")
+    
+    # Get stats
+    result = await db.execute(
+        select(Content).where(Content.client_id == client.id)
+    )
+    all_content = result.scalars().all()
+    
+    stats = {
+        "posts_this_month": client.posts_this_month,
+        "monthly_limit": client.monthly_post_limit,
+        "posts_remaining": client.monthly_post_limit - client.posts_this_month,
+    }
+    
+    # Get scheduled posts
+    scheduled_posts = []
+    published_posts = []
+    
+    for content in all_content:
+        if content.status in [ContentStatus.SCHEDULED, ContentStatus.APPROVED]:
+            scheduled_posts.append({
+                "id": content.id,
+                "topic": content.topic,
+                "caption": content.caption,
+                "media_urls": content.media_urls or [],
+                "platforms": content.platforms or [],
+                "scheduled_at": content.scheduled_at.strftime("%Y-%m-%d %H:%M") if content.scheduled_at else "Not scheduled",
+                "status": content.status.value,
+            })
+        elif content.status == ContentStatus.PUBLISHED:
+            published_posts.append({
+                "id": content.id,
+                "topic": content.topic,
+                "media_urls": content.media_urls or [],
+                "published_at": content.published_at.strftime("%Y-%m-%d %H:%M") if content.published_at else "Recently",
+            })
+    
+    # Sort by date
+    scheduled_posts.sort(key=lambda x: x["scheduled_at"])
+    published_posts.sort(key=lambda x: x["published_at"], reverse=True)
+    
+    return templates.TemplateResponse(
+        "client_dashboard.html",
+        {
+            "request": request,
+            "client": client,
+            "stats": stats,
+            "scheduled_posts": scheduled_posts[:10],
+            "recent_posts": published_posts[:5],
+            "scheduled_count": len(scheduled_posts),
+            "published_count": len([c for c in all_content if c.status == ContentStatus.PUBLISHED]),
+        },
+    )
 
 
 @router.post("/login", response_model=Token)

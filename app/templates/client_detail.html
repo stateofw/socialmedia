@@ -86,7 +86,51 @@
                             {% endif %}
                         </dd>
                     </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Publer Workspace ID</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if client.publer_workspace_id %}
+                                <span class="font-mono">{{ client.publer_workspace_id }}</span>
+                            {% else %}
+                                <span class="text-gray-400 italic">Not configured</span>
+                            {% endif %}
+                        </dd>
+                    </div>
                 </dl>
+            </div>
+
+            <!-- Client Portal Access Card -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Client Portal Access</h2>
+                <div class="space-y-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Portal Password</dt>
+                        <dd class="mt-2">
+                            {% if client.password_hash %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <svg class="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Set
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Not Set
+                                </span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <button
+                        onclick="showPasswordModal()"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                        {% if client.password_hash %}
+                            Reset Portal Password
+                        {% else %}
+                            Set Portal Password
+                        {% endif %}
+                    </button>
+                    <p class="text-xs text-gray-500">Client portal login: <a href="/client/login" class="text-indigo-600 hover:text-indigo-800">/client/login</a></p>
+                </div>
             </div>
 
             <!-- Platforms Card -->
@@ -254,6 +298,49 @@
     </div>
 </div>
 
+<!-- Password Modal -->
+<div id="password-modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">
+                {% if client.password_hash %}Reset{% else %}Set{% endif %} Portal Password
+            </h3>
+        </div>
+        <form id="password-form" class="px-6 py-4">
+            <div class="space-y-4">
+                <div>
+                    <label for="new_password" class="block text-sm font-medium text-gray-700">
+                        New Password <span class="text-red-500">*</span>
+                    </label>
+                    <input type="password" id="new_password" name="new_password" required
+                        minlength="8"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <p class="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
+                </div>
+                <div>
+                    <label for="confirm_password" class="block text-sm font-medium text-gray-700">
+                        Confirm Password <span class="text-red-500">*</span>
+                    </label>
+                    <input type="password" id="confirm_password" name="confirm_password" required
+                        minlength="8"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div id="password-error" class="hidden text-sm text-red-600"></div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="hidePasswordModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                    Set Password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 // Save WordPress settings
 document.getElementById('wordpress-form').addEventListener('submit', async (e) => {
@@ -370,5 +457,62 @@ function showError(message) {
 
     setTimeout(() => successDiv.classList.add('hidden'), 5000);
 }
+
+// Password modal functions
+function showPasswordModal() {
+    document.getElementById('password-modal').classList.remove('hidden');
+    document.getElementById('new_password').value = '';
+    document.getElementById('confirm_password').value = '';
+    document.getElementById('password-error').classList.add('hidden');
+}
+
+function hidePasswordModal() {
+    document.getElementById('password-modal').classList.add('hidden');
+}
+
+// Set client password
+document.getElementById('password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const newPassword = document.getElementById('new_password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    const errorDiv = document.getElementById('password-error');
+
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+        errorDiv.textContent = 'Passwords do not match';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    // Validate password length
+    if (newPassword.length < 8) {
+        errorDiv.textContent = 'Password must be at least 8 characters';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/clients/{{ client.id }}/set-password', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ password: newPassword })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            hidePasswordModal();
+            showSuccess('Client portal password set successfully!');
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            errorDiv.textContent = result.detail || 'Failed to set password';
+            errorDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        errorDiv.textContent = 'An error occurred. Please try again.';
+        errorDiv.classList.remove('hidden');
+    }
+});
 </script>
 {% endblock %}
