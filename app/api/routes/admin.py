@@ -1801,3 +1801,85 @@ async def update_client_settings(
         "placid_template_id": client.placid_template_id,
         "auto_post": client.auto_post
     }
+
+
+@router.post("/clients/{client_id}/toggle-access")
+async def toggle_client_access(
+    client_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Toggle client portal access (revoke or restore)."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(status_code=401)
+
+    # Verify client ownership
+    client_result = await db.execute(
+        select(Client)
+        .where(Client.id == client_id)
+        .where(Client.owner_id == user.id)
+    )
+    client = client_result.scalar_one_or_none()
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Toggle is_active status
+    client.is_active = not client.is_active
+    await db.commit()
+
+    action = "revoked" if not client.is_active else "restored"
+    print(f"✅ Client access {action}: {client.business_name} (ID: {client.id})")
+
+    return {
+        "success": True,
+        "message": f"Client portal access {action} successfully",
+        "is_active": client.is_active
+    }
+
+
+@router.delete("/clients/{client_id}/delete")
+async def delete_client(
+    client_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Permanently delete a client and all their content."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(status_code=401)
+
+    # Verify client ownership
+    client_result = await db.execute(
+        select(Client)
+        .where(Client.id == client_id)
+        .where(Client.owner_id == user.id)
+    )
+    client = client_result.scalar_one_or_none()
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    business_name = client.business_name
+
+    # Delete all associated content first
+    await db.execute(
+        select(Content).where(Content.client_id == client_id)
+    )
+    await db.execute(
+        Content.__table__.delete().where(Content.client_id == client_id)
+    )
+
+    # Delete the client
+    await db.delete(client)
+    await db.commit()
+
+    print(f"🗑️ Client deleted: {business_name} (ID: {client_id})")
+
+    return {
+        "success": True,
+        "message": f"Client {business_name} deleted successfully"
+    }
