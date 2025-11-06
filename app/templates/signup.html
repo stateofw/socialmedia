@@ -292,13 +292,14 @@
                 <div class="section-title">Contact Information</div>
 
                 <div class="form-group">
-                    <label for="email" class="required">Email</label>
-                    <input type="email" id="email" name="email" required>
+                    <label for="businessName" class="required">Business Name</label>
+                    <input type="text" id="businessName" name="business_name" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="businessName" class="required">Business Name</label>
-                    <input type="text" id="businessName" name="business_name" required>
+                    <label for="email" class="required">Email Address</label>
+                    <input type="email" id="email" name="email" required>
+                    <p class="helper-text">Primary contact email for your business</p>
                 </div>
 
                 <div class="form-group">
@@ -307,12 +308,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="contactEmail">Contact Person Email</label>
-                    <input type="email" id="contactEmail" name="contact_person_email">
-                </div>
-
-                <div class="form-group">
-                    <label for="contactPhone">Contact Person Phone Number</label>
+                    <label for="contactPhone">Phone Number</label>
                     <input type="tel" id="contactPhone" name="contact_person_phone">
                 </div>
 
@@ -578,7 +574,7 @@
                 email: document.getElementById('email').value,
                 business_name: document.getElementById('businessName').value,
                 contact_person_name: document.getElementById('contactName').value || null,
-                contact_person_email: document.getElementById('contactEmail').value || null,
+                contact_person_email: null,  // Not collected separately, using main email
                 contact_person_phone: document.getElementById('contactPhone').value || null,
                 business_website: document.getElementById('website').value || null,
                 additional_notes: document.getElementById('notes').value || null,
