@@ -1048,10 +1048,16 @@ async def generate_ideas(
         return {"ideas": ideas}
 
     except Exception as e:
-        print(f"❌ Failed to generate ideas: {str(e)}")
+        error_msg = str(e)
+        print(f"❌ Failed to generate ideas: {error_msg}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to generate ideas: {str(e)}")
+        
+        # Return detailed error for debugging
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to generate ideas: {error_msg[:200]}"  # Limit error message length
+        )
 
 
 @router.post("/brainstorm/create-content")
