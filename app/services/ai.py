@@ -699,6 +699,8 @@ Style: {style_modifier}"""
         location: str,
         brand_voice: Optional[str] = None,
         num_ideas: int = 10,
+        keyword: Optional[str] = None,
+        content_format: str = "social",
     ) -> List[Dict[str, str]]:
         """
         Generate content topic ideas for a business.
@@ -709,6 +711,8 @@ Style: {style_modifier}"""
             location: Business location
             brand_voice: Optional brand voice/tone
             num_ideas: Number of ideas to generate
+            keyword: Optional keyword/topic to focus ideas around
+            content_format: "social" for social media posts or "blog" for blog articles
 
         Returns:
             List of dicts with 'topic', 'content_type', and 'description'
@@ -734,24 +738,41 @@ Style: {style_modifier}"""
                 },
             ]
 
-        prompt = f"""Generate {num_ideas} content topic ideas for social media posts.
+        # Build keyword context
+        keyword_context = ""
+        if keyword:
+            keyword_context = f"\n**IMPORTANT: All ideas MUST be related to or incorporate this keyword/topic: {keyword}**\n"
+        
+        # Content format specific instructions
+        if content_format == "blog":
+            format_instruction = "blog articles (600-800 words)"
+            content_types = "how_to_guide, listicle, case_study, industry_news, educational, comparison, ultimate_guide"
+            description_note = "Brief outline of article structure and key points to cover"
+        else:
+            format_instruction = "social media posts"
+            content_types = "before_after, testimonial, offer, tip, team_update, project_showcase, seasonal, other"
+            description_note = "Brief description of what the post would cover"
+        
+        prompt = f"""Generate {num_ideas} content topic ideas for {format_instruction}.
 
 Business: {business_name}
 Industry: {industry}
 Location: {location}
 {f'Brand Voice: {brand_voice}' if brand_voice else ''}
+{keyword_context}
 
 For each idea, provide:
-1. A specific, engaging topic title
-2. Content type (choose from: before_after, testimonial, offer, tip, team_update, project_showcase, seasonal, other)
-3. Brief description of what the post would cover
+1. A specific, engaging topic title{' related to "' + keyword + '"' if keyword else ''}
+2. Content type (choose from: {content_types})
+3. {description_note}
 
 Focus on:
 - Local relevance to {location}
 - {industry}-specific insights
-- Mix of educational, promotional, and storytelling content
+{f'- How {keyword} relates to the business and customers' if keyword else '- Mix of educational, promotional, and storytelling content'}
 - Timely and seasonal topics
 - Customer pain points and solutions
+{'- In-depth, evergreen content that provides real value' if content_format == 'blog' else '- Engaging, shareable content that drives interaction'}
 
 Format your response EXACTLY like this:
 

@@ -28,6 +28,8 @@ class ScheduleUpdate(BaseModel):
 class BrainstormRequest(BaseModel):
     client_id: int
     num_ideas: int = 10
+    keyword: str | None = None
+    content_format: str = "social"  # "social" or "blog"
 
 
 class CreateContentRequest(BaseModel):
@@ -1043,6 +1045,8 @@ async def generate_ideas(
             location=location,
             brand_voice=client.brand_voice,
             num_ideas=brainstorm_request.num_ideas,
+            keyword=brainstorm_request.keyword,
+            content_format=brainstorm_request.content_format,
         )
 
         return {"ideas": ideas}

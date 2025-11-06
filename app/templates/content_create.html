@@ -96,19 +96,45 @@
                     
                     <!-- Brainstorm Panel -->
                     <div id="brainstorm-panel" class="hidden mt-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-sm font-medium text-gray-900">💡 Content Ideas</h4>
-                            <button type="button" onclick="generateIdeas()" id="generate-ideas-btn"
-                                class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-white bg-purple-600 hover:bg-purple-700 focus:outline-none disabled:opacity-50">
-                                <svg class="animate-spin h-3 w-3 mr-1 hidden" id="ideas-spinner" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span id="generate-ideas-text">Generate Ideas</span>
-                            </button>
+                        <div class="mb-3 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-sm font-medium text-gray-900">💡 Content Ideas</h4>
+                                <button type="button" onclick="generateIdeas()" id="generate-ideas-btn"
+                                    class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-white bg-purple-600 hover:bg-purple-700 focus:outline-none disabled:opacity-50">
+                                    <svg class="animate-spin h-3 w-3 mr-1 hidden" id="ideas-spinner" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span id="generate-ideas-text">Generate Ideas</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Content Format Selection -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Content Format</label>
+                                <div class="flex gap-2">
+                                    <label class="flex items-center flex-1">
+                                        <input type="radio" name="brainstorm-format" value="social" checked
+                                            class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300">
+                                        <span class="ml-1.5 text-xs text-gray-700">Social Media Post</span>
+                                    </label>
+                                    <label class="flex items-center flex-1">
+                                        <input type="radio" name="brainstorm-format" value="blog"
+                                            class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300">
+                                        <span class="ml-1.5 text-xs text-gray-700">Blog Article</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Keyword Input -->
+                            <div>
+                                <input type="text" id="brainstorm-keyword" placeholder="Optional: Enter keyword or topic (e.g., 'responsive design', 'SEO', 'summer')"
+                                    class="w-full text-xs border border-purple-300 rounded-md py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
+                                <p class="mt-1 text-xs text-gray-600">Leave blank for general ideas, or add a keyword for focused suggestions</p>
+                            </div>
                         </div>
                         <div id="ideas-container" class="space-y-2 max-h-96 overflow-y-auto">
-                            <p class="text-sm text-gray-500">Select a client and click "Generate Ideas" to see AI-powered content suggestions.</p>
+                            <p class="text-sm text-gray-500">Select format and click "Generate Ideas" for AI-powered suggestions.</p>
                         </div>
                     </div>
                 </div>
@@ -381,6 +407,8 @@ async function generateIdeas() {
     const spinner = document.getElementById('ideas-spinner');
     const text = document.getElementById('generate-ideas-text');
     const container = document.getElementById('ideas-container');
+    const keyword = document.getElementById('brainstorm-keyword').value.trim();
+    const format = document.querySelector('input[name="brainstorm-format"]:checked').value;
     
     // Show loading state
     btn.disabled = true;
@@ -396,7 +424,9 @@ async function generateIdeas() {
             },
             body: JSON.stringify({
                 client_id: parseInt(clientId),
-                num_ideas: 10
+                num_ideas: 10,
+                keyword: keyword || null,
+                content_format: format
             })
         });
         
@@ -427,16 +457,24 @@ function displayIdeas(ideas) {
         return;
     }
     
-    container.innerHTML = ideas.map((idea, index) => `
-        <div class="p-3 bg-white border border-purple-200 rounded-lg hover:border-purple-400 hover:shadow-sm transition-all cursor-pointer"
-            onclick="selectIdea(\`${idea.topic.replace(/`/g, '\\`')}\`, '${idea.content_type}')">
+    // Clear container
+    container.innerHTML = '';
+    
+    // Create idea cards with proper event listeners
+    ideas.forEach((idea, index) => {
+        const card = document.createElement('div');
+        card.className = 'p-3 bg-white border border-purple-200 rounded-lg hover:border-purple-400 hover:shadow-sm transition-all cursor-pointer idea-card';
+        card.setAttribute('data-topic', idea.topic);
+        card.setAttribute('data-content-type', idea.content_type);
+        
+        card.innerHTML = `
             <div class="flex items-start justify-between">
                 <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900">${idea.topic}</p>
-                    <p class="text-xs text-gray-500 mt-1">${idea.description}</p>
+                    <p class="text-sm font-medium text-gray-900">${escapeHtml(idea.topic)}</p>
+                    <p class="text-xs text-gray-500 mt-1">${escapeHtml(idea.description)}</p>
                 </div>
                 <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                    ${idea.content_type}
+                    ${escapeHtml(idea.content_type)}
                 </span>
             </div>
             <div class="mt-2 flex items-center text-xs text-purple-600">
@@ -445,8 +483,21 @@ function displayIdeas(ideas) {
                 </svg>
                 Click to use this idea
             </div>
-        </div>
-    `).join('');
+        `;
+        
+        // Add click event listener
+        card.addEventListener('click', () => {
+            selectIdea(idea.topic, idea.content_type);
+        });
+        
+        container.appendChild(card);
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function selectIdea(topic, contentType) {
