@@ -33,15 +33,25 @@ class ContentPreferenceUpdate(BaseModel):
 
 
 async def get_current_client_from_cookie(request: Request, db: AsyncSession):
-    """Get client from session cookie"""
-    client_id = request.cookies.get("client_id")
-    if not client_id:
+    """Get client from session cookie (JWT token)"""
+    from app.core.security import decode_access_token
+    
+    token = request.cookies.get("client_access_token")
+    if not token:
         return None
     
-    result = await db.execute(
-        select(Client).where(Client.id == int(client_id))
-    )
-    return result.scalar_one_or_none()
+    try:
+        payload = decode_access_token(token)
+        client_id = payload.get("client_id")
+        if not client_id:
+            return None
+        
+        result = await db.execute(
+            select(Client).where(Client.id == int(client_id))
+        )
+        return result.scalar_one_or_none()
+    except:
+        return None
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
