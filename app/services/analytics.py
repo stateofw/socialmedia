@@ -2,6 +2,7 @@
 Analytics Dashboard Service
 
 Reads data from Google Sheets publish logs and generates analytics insights.
+Now enhanced with real engagement data from Publer API.
 
 Metrics:
 - Total posts published
@@ -9,11 +10,16 @@ Metrics:
 - Posts by client
 - Success rate
 - Content performance over time
+- Real engagement data (likes, comments, shares, impressions, reach)
 """
 
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from app.core.config import settings
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
+from app.models.content import Content, ContentStatus
+from app.services.publer_analytics import publer_analytics
 import json
 import csv
 from pathlib import Path
@@ -384,6 +390,184 @@ class AnalyticsService:
             "data": sorted_series,
             "period_days": days,
         }
+
+    async def get_engagement_metrics(
+        self,
+        db: AsyncSession,
+        client_id: Optional[int] = None,
+        days: int = 30
+    ) -> Dict:
+        """
+        Get real engagement metrics from Publer API for published content.
+
+        Args:
+            db: Database session
+            client_id: Optional client ID to filter by
+            days: Number of days to look back
+
+        Returns:
+            Dict with engagement metrics (likes, comments, shares, impressions, reach)
+        """
+
+        # Build query for published content with platform post IDs
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+
+        query = select(Content).where(
+            and_(
+                Content.status == ContentStatus.PUBLISHED,
+                Content.published_at >= cutoff_date,
+                Content.platform_post_ids.isnot(None)
+            )
+        )
+
+        if client_id:
+            query = query.where(Content.client_id == client_id)
+
+        result = await db.execute(query)
+        published_posts = result.scalars().all()
+
+        # Aggregate metrics
+        total_likes = 0
+        total_comments = 0
+        total_shares = 0
+        total_impressions = 0
+        total_reach = 0
+        posts_with_analytics = 0
+
+        # Fetch analytics for each published post
+        for content in published_posts:
+            if not content.platform_post_ids:
+                continue
+
+            # Try to get Publer post ID from any platform
+            # Publer returns a single post ID that can be used across platforms
+            publer_post_id = None
+
+            # platform_post_ids is a dict like {"facebook": "123", "instagram": "456"}
+            # We need to find the Publer post ID (usually stored with key like "publer_id")
+            if isinstance(content.platform_post_ids, dict):
+                # First check if there's a direct publer_id key
+                publer_post_id = content.platform_post_ids.get("publer_id")
+
+                # If not, try to get any post ID (they might all be the same Publer ID)
+                if not publer_post_id and content.platform_post_ids:
+                    publer_post_id = next(iter(content.platform_post_ids.values()), None)
+
+            if publer_post_id:
+                analytics = await publer_analytics.get_post_analytics(publer_post_id)
+
+                if analytics:
+                    total_likes += analytics.get("likes", 0)
+                    total_comments += analytics.get("comments", 0)
+                    total_shares += analytics.get("shares", 0)
+                    total_impressions += analytics.get("impressions", 0)
+                    total_reach += analytics.get("reach", 0)
+                    posts_with_analytics += 1
+
+        # Calculate averages
+        avg_likes = round(total_likes / posts_with_analytics) if posts_with_analytics > 0 else 0
+        avg_comments = round(total_comments / posts_with_analytics) if posts_with_analytics > 0 else 0
+        avg_shares = round(total_shares / posts_with_analytics) if posts_with_analytics > 0 else 0
+        avg_impressions = round(total_impressions / posts_with_analytics) if posts_with_analytics > 0 else 0
+        avg_reach = round(total_reach / posts_with_analytics) if posts_with_analytics > 0 else 0
+
+        total_engagement = total_likes + total_comments + total_shares
+        avg_engagement_rate = 0
+        if total_reach > 0:
+            avg_engagement_rate = round((total_engagement / total_reach) * 100, 2)
+
+        return {
+            "total_posts_analyzed": len(published_posts),
+            "posts_with_analytics": posts_with_analytics,
+            "total_likes": total_likes,
+            "total_comments": total_comments,
+            "total_shares": total_shares,
+            "total_impressions": total_impressions,
+            "total_reach": total_reach,
+            "total_engagement": total_engagement,
+            "avg_likes_per_post": avg_likes,
+            "avg_comments_per_post": avg_comments,
+            "avg_shares_per_post": avg_shares,
+            "avg_impressions_per_post": avg_impressions,
+            "avg_reach_per_post": avg_reach,
+            "avg_engagement_rate": avg_engagement_rate,
+            "period_days": days,
+        }
+
+    async def get_top_performing_posts(
+        self,
+        db: AsyncSession,
+        client_id: Optional[int] = None,
+        limit: int = 10,
+        days: int = 30
+    ) -> List[Dict]:
+        """
+        Get top performing posts based on engagement.
+
+        Args:
+            db: Database session
+            client_id: Optional client ID to filter by
+            limit: Number of top posts to return
+            days: Number of days to look back
+
+        Returns:
+            List of top posts with their analytics
+        """
+
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+
+        query = select(Content).where(
+            and_(
+                Content.status == ContentStatus.PUBLISHED,
+                Content.published_at >= cutoff_date,
+                Content.platform_post_ids.isnot(None)
+            )
+        )
+
+        if client_id:
+            query = query.where(Content.client_id == client_id)
+
+        result = await db.execute(query)
+        published_posts = result.scalars().all()
+
+        # Fetch analytics for each post
+        posts_with_metrics = []
+
+        for content in published_posts:
+            if not content.platform_post_ids:
+                continue
+
+            publer_post_id = None
+            if isinstance(content.platform_post_ids, dict):
+                publer_post_id = content.platform_post_ids.get("publer_id")
+                if not publer_post_id:
+                    publer_post_id = next(iter(content.platform_post_ids.values()), None)
+
+            if publer_post_id:
+                analytics = await publer_analytics.get_post_analytics(publer_post_id)
+
+                if analytics:
+                    total_engagement = publer_analytics.calculate_total_engagement(analytics)
+
+                    posts_with_metrics.append({
+                        "content_id": content.id,
+                        "topic": content.topic,
+                        "caption": content.caption[:100] + "..." if content.caption and len(content.caption) > 100 else content.caption,
+                        "published_at": content.published_at.isoformat() if content.published_at else None,
+                        "platforms": content.platforms or [],
+                        "total_engagement": total_engagement,
+                        "likes": analytics.get("likes", 0),
+                        "comments": analytics.get("comments", 0),
+                        "shares": analytics.get("shares", 0),
+                        "impressions": analytics.get("impressions", 0),
+                        "reach": analytics.get("reach", 0),
+                        "engagement_rate": analytics.get("engagement_rate", 0),
+                    })
+
+        # Sort by total engagement and return top N
+        posts_with_metrics.sort(key=lambda x: x["total_engagement"], reverse=True)
+
+        return posts_with_metrics[:limit]
 
 
 # Singleton instance

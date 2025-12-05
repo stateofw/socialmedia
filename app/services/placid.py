@@ -9,7 +9,7 @@ class PlacidService:
     When PLACID_API_KEY or PLACID_TEMPLATE_ID is missing, acts as a no-op.
     """
 
-    BASE_URL = "https://api.placid.app/u/creatives"
+    BASE_URL = "https://api.placid.app/api/rest/images"
 
     async def generate_asset(
         self,
@@ -28,20 +28,18 @@ class PlacidService:
 
         payload: Dict = {
             "template_uuid": template,
-            "modifications": [],
+            "layers": {},
         }
 
         for key, value in text_fields.items():
-            payload["modifications"].append({
-                "name": key,
+            payload["layers"][key] = {
                 "text": value,
-            })
+            }
 
         if image_url:
-            payload["modifications"].append({
-                "name": "image",
+            payload["layers"]["image"] = {
                 "image": image_url,
-            })
+            }
 
         headers = {"Authorization": f"Bearer {api_key}"}
 

@@ -1,0 +1,31 @@
+{% if clients %}
+    {% for client in clients %}
+    <button
+        @click="
+            selectedClient = {{ client|tojson }};
+            document.cookie = `selected_client_id={{ client.id }}; path=/; max-age=2592000`;
+            open = false;
+            window.location.href = '/admin/dashboard?client_id={{ client.id }}';
+        "
+        x-show="search === '' || '{{ client.business_name }}'.toLowerCase().includes(search.toLowerCase())"
+        class="w-full text-left px-4 py-3 text-sm hover:bg-gray-100 flex items-center justify-between group">
+        <div class="flex items-center space-x-3">
+            <div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold text-xs">
+                {{ client.business_name[0].upper() }}
+            </div>
+            <div>
+                <p class="font-medium text-gray-900">{{ client.business_name }}</p>
+                <p class="text-xs text-gray-500">{{ client.industry or 'No industry' }}</p>
+            </div>
+        </div>
+        <svg class="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+    </button>
+    {% endfor %}
+{% else %}
+    <div class="px-4 py-8 text-sm text-gray-500 text-center">
+        <p>No clients found</p>
+        <a href="/admin/clients/new" class="text-indigo-600 hover:text-indigo-500 font-medium">Add your first client</a>
+    </div>
+{% endif %}

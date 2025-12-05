@@ -21,6 +21,40 @@
         </div>
     </div>
 
+    <!-- Client Context Banner (shown when a client is selected) -->
+    {% if selected_client %}
+    <div class="mb-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-lg overflow-hidden">
+        <div class="px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="h-12 w-12 rounded-full bg-white flex items-center justify-center text-indigo-600 font-bold text-lg">
+                        {{ selected_client.business_name[0].upper() }}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">{{ selected_client.business_name }}</h2>
+                        <p class="text-indigo-100 text-sm">
+                            {{ selected_client.industry or 'No industry specified' }}
+                            {% if selected_client.city %}• {{ selected_client.city }}, {{ selected_client.state }}{% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="/admin/clients/{{ selected_client.id }}"
+                       class="px-4 py-2 bg-white text-indigo-600 rounded-md text-sm font-medium hover:bg-indigo-50 transition-colors">
+                        View Client Details
+                    </a>
+                    <button onclick="
+                        document.cookie = 'selected_client_id=; path=/; max-age=0';
+                        window.location.href = '/admin/dashboard';
+                    " class="px-4 py-2 bg-indigo-700 text-white rounded-md text-sm font-medium hover:bg-indigo-800 transition-colors">
+                        Clear Filter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <div class="bg-white overflow-hidden shadow rounded-lg">
@@ -98,6 +132,100 @@
                             <dt class="text-sm font-medium text-gray-500 truncate">This Month</dt>
                             <dd class="text-3xl font-semibold text-gray-900">{{ stats.published_this_month }}</dd>
                         </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Engagement Metrics Section -->
+    <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <svg class="h-5 w-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+            Real Engagement Metrics (Last 30 Days)
+        </h3>
+        {% if stats.posts_with_analytics > 0 %}
+        <p class="text-sm text-gray-600 mb-4">Data from {{ stats.posts_with_analytics }} published posts via Publer API</p>
+        {% else %}
+        <p class="text-sm text-gray-600 mb-4">No published posts yet. Engagement metrics will appear here once posts are approved and published.</p>
+        {% endif %}
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <!-- Total Engagement -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Engagement</p>
+                        <p class="text-2xl font-bold text-purple-600">{{ stats.total_engagement|number_format }}</p>
+                    </div>
+                    <div class="p-3 bg-purple-100 rounded-full">
+                        <svg class="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">{{ stats.avg_engagement_rate }}% engagement rate</p>
+            </div>
+
+            <!-- Likes -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Likes</p>
+                        <p class="text-2xl font-bold text-pink-600">{{ stats.total_likes|number_format }}</p>
+                    </div>
+                    <div class="p-3 bg-pink-100 rounded-full">
+                        <svg class="h-6 w-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comments -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Comments</p>
+                        <p class="text-2xl font-bold text-blue-600">{{ stats.total_comments|number_format }}</p>
+                    </div>
+                    <div class="p-3 bg-blue-100 rounded-full">
+                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shares -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Shares</p>
+                        <p class="text-2xl font-bold text-green-600">{{ stats.total_shares|number_format }}</p>
+                    </div>
+                    <div class="p-3 bg-green-100 rounded-full">
+                        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reach -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Reach</p>
+                        <p class="text-2xl font-bold text-indigo-600">{{ stats.total_reach|number_format }}</p>
+                    </div>
+                    <div class="p-3 bg-indigo-100 rounded-full">
+                        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
                     </div>
                 </div>
             </div>

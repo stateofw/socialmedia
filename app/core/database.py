@@ -40,7 +40,11 @@ else:
         use_ssl = False
 
 # Create async engine with conditional SSL
-connect_args = {"ssl": use_ssl}
+# Only add SSL for PostgreSQL, SQLite doesn't support it
+if database_url.startswith("sqlite"):
+    connect_args = {}
+else:
+    connect_args = {"ssl": use_ssl}
 
 engine = create_async_engine(
     # Remove unsupported psycopg-style sslmode param for asyncpg

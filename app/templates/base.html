@@ -49,8 +49,60 @@
                         </a>
                     </div>
                 </div>
-                <div class="hidden sm:ml-6 sm:flex sm:items-center">
-                    <div class="ml-3 relative" x-data="{ open: false }">
+                <div class="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+                    <!-- Client Selector Dropdown -->
+                    <div class="relative" x-data="{ open: false, search: '', selectedClient: null }" x-init="
+                        // Load selected client from cookie
+                        const clientId = document.cookie.split('; ').find(row => row.startsWith('selected_client_id='))?.split('=')[1];
+                        if (clientId) {
+                            fetch(`/api/v1/clients/${clientId}`)
+                                .then(r => r.json())
+                                .then(data => selectedClient = data)
+                                .catch(() => {});
+                        }
+                    ">
+                        <button @click="open = !open" class="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            <span x-text="selectedClient ? selectedClient.business_name : 'Select Client'"></span>
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <!-- Dropdown -->
+                        <div x-show="open" @click.away="open = false" x-cloak class="origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
+                            <div class="p-3 border-b">
+                                <input
+                                    type="text"
+                                    x-model="search"
+                                    placeholder="Search clients..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                            </div>
+                            <div class="max-h-96 overflow-y-auto py-1"
+                                 hx-get="/admin/clients/selector"
+                                 hx-trigger="load"
+                                 hx-target="this"
+                                 hx-swap="innerHTML">
+                                <div class="px-4 py-3 text-sm text-gray-500 text-center">Loading clients...</div>
+                            </div>
+                            <div class="p-3 border-t bg-gray-50">
+                                <button @click="
+                                    selectedClient = null;
+                                    document.cookie = 'selected_client_id=; path=/; max-age=0';
+                                    open = false;
+                                    window.location.href = '/admin/dashboard';
+                                " class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">
+                                    <span class="font-medium">Clear Selection</span> - View all clients
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Menu -->
+                    <div class="relative" x-data="{ open: false }">
                         <div>
                             <button @click="open = !open" class="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                 <span class="sr-only">Open user menu</span>

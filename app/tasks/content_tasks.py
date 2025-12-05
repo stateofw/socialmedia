@@ -3,6 +3,7 @@ from sqlalchemy import select
 from app.models.content import Content, ContentStatus
 from app.models.client import Client
 from app.services.ai import ai_service
+from app.services.placid import placid_service
 
 
 @celery_app.task(name="generate_content")
@@ -39,16 +40,34 @@ async def _generate_content(content_id: int):
             return
 
         try:
-            # Generate social post
-            ai_result = await ai_service.generate_social_post(
-                business_name=client.business_name,
-                industry=client.industry or "local business",
-                topic=content.topic,
-                location=content.focus_location or client.service_area or f"{client.city}, {client.state}",
-                content_type=content.content_type.value,
-                brand_voice=client.brand_voice,
-                notes=content.notes,
-            )
+            # Determine workflow: Image-first or Topic-first
+            location = content.focus_location or client.service_area or f"{client.city}, {client.state}"
+
+            # Check if we have images to analyze (Image-First workflow)
+            if content.media_urls and len(content.media_urls) > 0:
+                # Image-First: AI analyzes the uploaded image
+                print(f"📸 Using Image-First workflow - analyzing uploaded image")
+                ai_result = await ai_service.generate_social_post_from_image(
+                    business_name=client.business_name,
+                    industry=client.industry or "local business",
+                    location=location,
+                    image_url=content.media_urls[0],  # Use first image
+                    content_type=content.content_type.value,
+                    brand_voice=client.brand_voice,
+                    notes=content.notes or content.topic,  # Use topic as additional context
+                )
+            else:
+                # Topic-First: AI generates content from topic description
+                print(f"📝 Using Topic-First workflow - generating from topic")
+                ai_result = await ai_service.generate_social_post(
+                    business_name=client.business_name,
+                    industry=client.industry or "local business",
+                    topic=content.topic,
+                    location=location,
+                    content_type=content.content_type.value,
+                    brand_voice=client.brand_voice,
+                    notes=content.notes,
+                )
 
             # Update content
             content.caption = ai_result["caption"]
@@ -71,6 +90,33 @@ async def _generate_content(content_id: int):
                     content.platform_captions = variations
             except Exception as e:
                 print(f"⚠️ Failed to generate platform variations: {e}")
+
+            # Generate branded image with Placid if no media uploaded and client has template
+            if not content.media_urls or len(content.media_urls) == 0:
+                if client.placid_template_id:
+                    print(f"🎨 Generating branded image with Placid...")
+                    try:
+                        # Extract first ~60 chars from caption as title
+                        title = content.caption[:60] if content.caption else content.topic[:60]
+
+                        placid_image_url = await placid_service.generate_social_post_image(
+                            title=title,
+                            business_name=client.business_name,
+                            subtitle=content.topic if content.topic != title else None,
+                            industry=client.industry,
+                            client_template_id=client.placid_template_id,
+                        )
+
+                        if placid_image_url:
+                            content.media_urls = [placid_image_url]
+                            content.media_type = "image"
+                            print(f"✅ Generated Placid branded image: {placid_image_url}")
+                        else:
+                            print(f"⚠️ Placid image generation returned None")
+                    except Exception as e:
+                        print(f"⚠️ Failed to generate Placid image: {e}")
+                else:
+                    print(f"ℹ️  No Placid template configured for client, skipping image generation")
 
             await db.commit()
 

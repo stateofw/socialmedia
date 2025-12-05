@@ -72,28 +72,38 @@ class ImageGeneratorService:
             print("❌ No FAL_API_KEY configured, cannot generate backup image")
             return None
         
-        # Build prompt for business post
-        prompt_parts = [
-            f"Professional social media post image for {business_name}",
-            f"featuring: {title}",
-        ]
+        # Build prompt for business post using caption content for relevance
+        prompt_parts = []
         
+        # Extract key concepts from caption/subtitle for relevant imagery
         if subtitle:
-            prompt_parts.append(f"about {subtitle}")
+            # Remove emojis and extract meaningful content
+            import re
+            clean_subtitle = re.sub(r'[^\w\s\-,.]', '', subtitle)
+            # Take first 100 chars for relevance
+            main_content = clean_subtitle[:100] if len(clean_subtitle) > 100 else clean_subtitle
+            prompt_parts.append(f"Professional social media image depicting: {main_content}")
+        else:
+            prompt_parts.append(f"Professional social media post image for {business_name}")
+            prompt_parts.append(f"featuring: {title}")
         
+        # Add industry-specific visual style
         if industry:
             industry_styles = {
-                "landscaping": "outdoor, green, nature, lawn, garden",
-                "construction": "building, professional, tools, architecture",
-                "hvac": "modern, clean, professional, comfort",
-                "restaurant": "food, dining, appetizing, elegant",
-                "fitness": "dynamic, energetic, health, wellness",
-                "real_estate": "modern home, property, professional",
+                "landscaping": "outdoor setting, lush green landscape, natural garden, vibrant plants",
+                "construction": "construction site, professional workers, modern building, architectural elements",
+                "hvac": "modern interior, clean home environment, comfortable living space, professional service",
+                "restaurant": "delicious food presentation, elegant dining atmosphere, culinary artistry",
+                "fitness": "dynamic workout scene, energetic people exercising, health and wellness focus",
+                "real_estate": "beautiful modern home exterior, welcoming property, professional real estate",
+                "education": "learning environment, students engaged, educational setting, bright classroom",
+                "technology": "modern tech workspace, digital devices, innovative technology, clean design",
             }
-            style = industry_styles.get(industry, "professional, clean, modern")
-            prompt_parts.append(f"style: {style}")
+            style = industry_styles.get(industry, "professional business setting, clean modern aesthetic")
+            prompt_parts.append(style)
         
-        prompt_parts.append("high quality, professional photography, well-lit, 16:9 aspect ratio")
+        # Add visual quality requirements
+        prompt_parts.append("photorealistic, professional photography, bright and inviting, high quality, well-lit, 16:9 aspect ratio, perfect for social media")
         
         full_prompt = ", ".join(prompt_parts)
         

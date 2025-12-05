@@ -15,6 +15,7 @@ from app.models.user import User
 from app.models.client import Client
 from app.models.content import Content, ContentStatus
 from app.models.client_signup import ClientSignup
+from app.services.analytics import analytics_service
 
 
 class CaptionUpdate(BaseModel):
@@ -119,6 +120,7 @@ async def logout():
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(
     request: Request,
+    client_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Show admin dashboard."""
@@ -127,18 +129,42 @@ async def dashboard(
     if not user:
         return RedirectResponse(url="/admin/login")
 
+    # Check for selected client (from query param or cookie)
+    selected_client = None
+    if client_id:
+        result = await db.execute(
+            select(Client).where(Client.id == client_id).where(Client.owner_id == user.id)
+        )
+        selected_client = result.scalar_one_or_none()
+    else:
+        # Try cookie
+        client_id_cookie = request.cookies.get("selected_client_id")
+        if client_id_cookie:
+            try:
+                result = await db.execute(
+                    select(Client).where(Client.id == int(client_id_cookie)).where(Client.owner_id == user.id)
+                )
+                selected_client = result.scalar_one_or_none()
+            except (ValueError, TypeError):
+                pass
+
+    # Build filters based on selected client
+    content_filters = [Content.status == ContentStatus.PENDING_APPROVAL]
+    if selected_client:
+        content_filters.append(Content.client_id == selected_client.id)
+
     # Get stats
     pending_result = await db.execute(
-        select(func.count(Content.id)).where(
-            Content.status == ContentStatus.PENDING_APPROVAL
-        )
+        select(func.count(Content.id)).where(*content_filters)
     )
     pending_count = pending_result.scalar()
 
+    scheduled_filters = [Content.status == ContentStatus.SCHEDULED]
+    if selected_client:
+        scheduled_filters.append(Content.client_id == selected_client.id)
+
     scheduled_result = await db.execute(
-        select(func.count(Content.id)).where(
-            Content.status == ContentStatus.SCHEDULED
-        )
+        select(func.count(Content.id)).where(*scheduled_filters)
     )
     scheduled_count = scheduled_result.scalar()
 
@@ -147,21 +173,27 @@ async def dashboard(
     )
     total_clients = clients_result.scalar()
 
+    published_filters = [Content.status == ContentStatus.PUBLISHED]
+    if selected_client:
+        published_filters.append(Content.client_id == selected_client.id)
+
     published_result = await db.execute(
-        select(func.count(Content.id)).where(
-            Content.status == ContentStatus.PUBLISHED
-        )
+        select(func.count(Content.id)).where(*published_filters)
     )
     published_this_month = published_result.scalar()
 
     # Get pending content
-    pending_content_result = await db.execute(
+    pending_content_query = (
         select(Content, Client)
         .join(Client, Content.client_id == Client.id)
         .where(Content.status == ContentStatus.PENDING_APPROVAL)
         .where(Client.owner_id == user.id)
-        .order_by(Content.created_at.desc())
-        .limit(10)
+    )
+    if selected_client:
+        pending_content_query = pending_content_query.where(Content.client_id == selected_client.id)
+
+    pending_content_result = await db.execute(
+        pending_content_query.order_by(Content.created_at.desc()).limit(10)
     )
     pending_rows = pending_content_result.all()
 
@@ -177,11 +209,26 @@ async def dashboard(
             "focus_location": content.focus_location or "",
         })
 
+    # Get engagement metrics from Publer
+    engagement_metrics = await analytics_service.get_engagement_metrics(
+        db=db,
+        client_id=selected_client.id if selected_client else None,
+        days=30
+    )
+
     stats = {
         "pending_count": pending_count,
         "scheduled_count": scheduled_count,
         "total_clients": total_clients,
         "published_this_month": published_this_month,
+        # Add engagement metrics
+        "total_engagement": engagement_metrics.get("total_engagement", 0),
+        "avg_engagement_rate": engagement_metrics.get("avg_engagement_rate", 0),
+        "total_likes": engagement_metrics.get("total_likes", 0),
+        "total_comments": engagement_metrics.get("total_comments", 0),
+        "total_shares": engagement_metrics.get("total_shares", 0),
+        "total_reach": engagement_metrics.get("total_reach", 0),
+        "posts_with_analytics": engagement_metrics.get("posts_with_analytics", 0),
     }
 
     return templates.TemplateResponse(
@@ -191,6 +238,7 @@ async def dashboard(
             "user": user,
             "stats": stats,
             "pending_content": pending_content,
+            "selected_client": selected_client,
         },
     )
 
@@ -199,9 +247,10 @@ async def dashboard(
 async def approve_content_htmx(
     content_id: int,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """Approve content (HTMX endpoint)."""
+    """Approve content and schedule to Publer (HTMX endpoint)."""
 
     user = await get_current_user_from_cookie(request, db)
     if not user:
@@ -231,13 +280,28 @@ async def approve_content_htmx(
     # Update status
     content.status = ContentStatus.APPROVED
     
+    # Set default schedule time (1 hour from now)
+    from datetime import datetime, timedelta
+    if not content.scheduled_at:
+        content.scheduled_at = datetime.utcnow() + timedelta(hours=1)
+    
     # Increment monthly counter
     client.posts_this_month += 1
 
     await db.commit()
 
-    # Return empty (will remove from list)
-    return HTMLResponse("")
+    # Schedule to Publer in background
+    from app.api.routes.approval import publish_approved_content
+    background_tasks.add_task(
+        publish_approved_content,
+        content_id=content.id,
+        client_id=client.id,
+    )
+
+    # Return success message
+    return HTMLResponse(
+        '<div class="text-green-600 text-sm">✅ Content approved and scheduled to Publer!</div>'
+    )
 
 
 @router.get("/clients", response_class=HTMLResponse)
@@ -264,6 +328,35 @@ async def clients_page(
         {
             "request": request,
             "user": user,
+            "clients": clients,
+        },
+    )
+
+
+@router.get("/clients/selector", response_class=HTMLResponse)
+async def clients_selector(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return client selector dropdown items (HTMX partial)."""
+
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        return HTMLResponse("<div class='text-red-500'>Not authenticated</div>")
+
+    # Get active clients
+    result = await db.execute(
+        select(Client)
+        .where(Client.owner_id == user.id)
+        .where(Client.is_active == True)
+        .order_by(Client.business_name)
+    )
+    clients = result.scalars().all()
+
+    return templates.TemplateResponse(
+        "partials/client_selector_items.html",
+        {
+            "request": request,
             "clients": clients,
         },
     )
@@ -1089,6 +1182,7 @@ async def create_content_from_idea(
 
     # Create content draft
     from app.models.content import ContentType
+    import re
 
     # Map content_type string to enum
     try:
@@ -1096,11 +1190,48 @@ async def create_content_from_idea(
     except KeyError:
         content_type_enum = ContentType.OTHER
 
+    # Parse notes field to extract caption, hashtags, and CTA
+    caption = None
+    hashtags = []
+    cta = None
+    
+    if content_request.notes:
+        print(f"📝 Parsing notes field: {content_request.notes[:200]}...")
+        
+        # Extract caption - match until HASHTAGS or CALL-TO-ACTION or end
+        caption_match = re.search(r'CAPTION:\s*\n(.+?)(?=\n(?:HASHTAGS|CALL-TO-ACTION):|$)', content_request.notes, re.DOTALL)
+        if caption_match:
+            caption = caption_match.group(1).strip()
+            print(f"✅ Extracted caption: {caption[:100]}...")
+        else:
+            print("⚠️  Caption not found in notes")
+        
+        # Extract hashtags - match until CALL-TO-ACTION or end
+        hashtags_match = re.search(r'HASHTAGS:\s*\n(.+?)(?=\nCALL-TO-ACTION:|$)', content_request.notes, re.DOTALL)
+        if hashtags_match:
+            hashtags_text = hashtags_match.group(1).strip()
+            # Remove # symbols and split by space or comma
+            hashtags = [tag.strip('#').strip() for tag in re.split(r'[,\s]+', hashtags_text) if tag.strip()]
+            print(f"✅ Extracted hashtags: {hashtags}")
+        else:
+            print("⚠️  Hashtags not found in notes")
+        
+        # Extract CTA - match to end of string
+        cta_match = re.search(r'CALL-TO-ACTION:\s*\n(.+?)$', content_request.notes, re.DOTALL)
+        if cta_match:
+            cta = cta_match.group(1).strip()
+            print(f"✅ Extracted CTA: {cta[:100]}...")
+        else:
+            print("⚠️  CTA not found in notes")
+
     content = Content(
         client_id=client.id,
         topic=content_request.topic,
         content_type=content_type_enum,
         notes=content_request.notes,
+        caption=caption,
+        hashtags=hashtags if hashtags else None,
+        cta=cta,
         focus_location=f"{client.city}, {client.state}",
         status=ContentStatus.DRAFT,
     )
@@ -1108,6 +1239,31 @@ async def create_content_from_idea(
     db.add(content)
     await db.commit()
     await db.refresh(content)
+
+    # Generate image automatically if caption exists
+    if caption:
+        from app.services.image_generator import image_generator
+        
+        try:
+            print(f"🎨 Generating image for content {content.id}...")
+            image_url = await image_generator.generate_post_image(
+                title=content.topic,
+                business_name=client.business_name,
+                subtitle=caption[:100] if len(caption) > 100 else caption,
+                industry=client.industry,
+                client_placid_template=client.placid_template_id,
+            )
+            
+            if image_url:
+                content.media_urls = [image_url]
+                content.media_type = "image"
+                await db.commit()
+                print(f"✅ Image generated and saved: {image_url}")
+            else:
+                print(f"⚠️ Image generation failed, content created without image")
+        except Exception as e:
+            print(f"⚠️ Image generation error: {e}")
+            # Don't fail content creation if image generation fails
 
     return {"success": True, "content_id": content.id}
 
@@ -1422,11 +1578,46 @@ async def create_new_content(
 
     # Map content_type string to enum
     from app.models.content import ContentType
+    import re
 
     try:
         content_type_enum = ContentType[content_request.content_type.upper()]
     except KeyError:
         content_type_enum = ContentType.OTHER
+
+    # Parse notes field to extract caption, hashtags, and CTA
+    caption = None
+    hashtags = []
+    cta = None
+    
+    if content_request.notes:
+        print(f"📝 Parsing notes field: {content_request.notes[:200]}...")
+        
+        # Extract caption - match until HASHTAGS or CALL-TO-ACTION or end
+        caption_match = re.search(r'CAPTION:\s*\n(.+?)(?=\n(?:HASHTAGS|CALL-TO-ACTION):|$)', content_request.notes, re.DOTALL)
+        if caption_match:
+            caption = caption_match.group(1).strip()
+            print(f"✅ Extracted caption: {caption[:100]}...")
+        else:
+            print("⚠️  Caption not found in notes")
+        
+        # Extract hashtags - match until CALL-TO-ACTION or end
+        hashtags_match = re.search(r'HASHTAGS:\s*\n(.+?)(?=\nCALL-TO-ACTION:|$)', content_request.notes, re.DOTALL)
+        if hashtags_match:
+            hashtags_text = hashtags_match.group(1).strip()
+            # Remove # symbols and split by space or comma
+            hashtags = [tag.strip('#').strip() for tag in re.split(r'[,\s]+', hashtags_text) if tag.strip()]
+            print(f"✅ Extracted hashtags: {hashtags}")
+        else:
+            print("⚠️  Hashtags not found in notes")
+        
+        # Extract CTA - match to end of string
+        cta_match = re.search(r'CALL-TO-ACTION:\s*\n(.+?)$', content_request.notes, re.DOTALL)
+        if cta_match:
+            cta = cta_match.group(1).strip()
+            print(f"✅ Extracted CTA: {cta[:100]}...")
+        else:
+            print("⚠️  CTA not found in notes")
 
     # Create content record
     content = Content(
@@ -1435,6 +1626,9 @@ async def create_new_content(
         content_type=content_type_enum,
         focus_location=content_request.focus_location,
         notes=content_request.notes,
+        caption=caption,
+        hashtags=hashtags if hashtags else None,
+        cta=cta,
         platforms=client.platforms_enabled or [],
         status=ContentStatus.DRAFT,
     )
@@ -1442,6 +1636,31 @@ async def create_new_content(
     db.add(content)
     await db.commit()
     await db.refresh(content)
+    
+    # Generate image automatically if caption exists
+    if caption:
+        from app.services.image_generator import image_generator
+        
+        try:
+            print(f"🎨 Generating image for content {content.id}...")
+            image_url = await image_generator.generate_post_image(
+                title=content.topic,
+                business_name=client.business_name,
+                subtitle=caption[:100] if len(caption) > 100 else caption,
+                industry=client.industry,
+                client_placid_template=client.placid_template_id,
+            )
+            
+            if image_url:
+                content.media_urls = [image_url]
+                content.media_type = "image"
+                await db.commit()
+                print(f"✅ Image generated and saved: {image_url}")
+            else:
+                print(f"⚠️ Image generation failed, content created without image")
+        except Exception as e:
+            print(f"⚠️ Image generation error: {e}")
+            # Don't fail content creation if image generation fails
 
     # Generate content in background
     background_tasks.add_task(

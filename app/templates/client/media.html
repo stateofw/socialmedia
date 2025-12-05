@@ -9,30 +9,86 @@
     </div>
 
     <!-- Upload Section -->
-    <div class="bg-white shadow rounded-lg mb-6">
+    <div class="bg-white shadow rounded-lg mb-6" x-data="mediaUploader()">
         <div class="px-4 py-5 sm:p-6">
             <h3 class="text-lg font-medium text-gray-900 mb-4">Upload Media</h3>
             <form action="/api/v1/client/media/upload" method="POST" enctype="multipart/form-data" class="space-y-4">
-                <div class="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-purple-400 transition-colors">
+                <!-- Drop Zone -->
+                <div
+                    @dragover.prevent="isDragging = true"
+                    @dragleave.prevent="isDragging = false"
+                    @drop.prevent="handleDrop($event)"
+                    :class="isDragging ? 'border-purple-500 bg-purple-50' : 'border-gray-300'"
+                    class="flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-lg transition-all duration-200 cursor-pointer"
+                    @click="$refs.fileInput.click()">
                     <div class="space-y-1 text-center">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <svg class="mx-auto h-12 w-12" :class="isDragging ? 'text-purple-500' : 'text-gray-400'" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                             <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         <div class="flex text-sm text-gray-600">
-                            <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500">
-                                <span>Upload files</span>
-                                <input id="file-upload" name="files" type="file" class="sr-only" multiple accept="image/*,video/*" onchange="showFileNames(this)">
-                            </label>
+                            <span class="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500">
+                                Upload files
+                                <input
+                                    x-ref="fileInput"
+                                    id="file-upload"
+                                    name="files"
+                                    type="file"
+                                    class="sr-only"
+                                    multiple
+                                    accept="image/*,video/*"
+                                    @change="handleFiles($event.target.files)">
+                            </span>
                             <p class="pl-1">or drag and drop</p>
                         </div>
                         <p class="text-xs text-gray-500">
                             PNG, JPG, GIF, MP4, MOV up to 50MB each
                         </p>
-                        <div id="file-names" class="mt-2 text-sm text-gray-600"></div>
                     </div>
                 </div>
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
-                    Upload Selected Files
+
+                <!-- Preview Grid -->
+                <div x-show="selectedFiles.length > 0" class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-3">
+                        <span x-text="selectedFiles.length"></span> file(s) selected
+                    </p>
+                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                        <template x-for="(file, index) in selectedFiles" :key="index">
+                            <div class="relative group">
+                                <div class="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200 border-2 border-purple-200">
+                                    <template x-if="file.type.startsWith('image/')">
+                                        <img :src="file.preview" :alt="file.name" class="h-full w-full object-cover">
+                                    </template>
+                                    <template x-if="file.type.startsWith('video/')">
+                                        <div class="flex items-center justify-center h-full bg-gray-100">
+                                            <svg class="h-12 w-12 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                                            </svg>
+                                        </div>
+                                    </template>
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="removeFile(index)"
+                                    class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                <p class="mt-1 text-xs text-gray-600 truncate" x-text="file.name"></p>
+                                <p class="text-xs text-gray-400" x-text="formatSize(file.size)"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    x-show="selectedFiles.length > 0"
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
+                    <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    Upload <span x-text="selectedFiles.length"></span> File(s)
                 </button>
             </form>
         </div>
@@ -113,13 +169,70 @@
 </div>
 
 <script>
-function showFileNames(input) {
-    const fileNamesDiv = document.getElementById('file-names');
-    const files = Array.from(input.files);
+function mediaUploader() {
+    return {
+        isDragging: false,
+        selectedFiles: [],
 
-    if (files.length > 0) {
-        fileNamesDiv.innerHTML = '<strong>Selected files:</strong><br>' +
-            files.map(f => f.name).join('<br>');
+        handleDrop(event) {
+            this.isDragging = false;
+            const files = event.dataTransfer.files;
+            this.handleFiles(files);
+        },
+
+        handleFiles(files) {
+            const fileArray = Array.from(files);
+
+            // Validate and create previews
+            fileArray.forEach(file => {
+                // Check file size (50MB max)
+                if (file.size > 50 * 1024 * 1024) {
+                    showToast(`File ${file.name} is too large (max 50MB)`, 'error');
+                    return;
+                }
+
+                // Check file type
+                if (!file.type.match(/(image|video)\/.*/)) {
+                    showToast(`File ${file.name} is not a supported format`, 'error');
+                    return;
+                }
+
+                // Create preview for images
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        file.preview = e.target.result;
+                        this.selectedFiles.push(file);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    // For videos, just add without preview
+                    this.selectedFiles.push(file);
+                }
+            });
+
+            // Update the file input
+            const dt = new DataTransfer();
+            this.selectedFiles.forEach(f => dt.items.add(f));
+            this.$refs.fileInput.files = dt.files;
+        },
+
+        removeFile(index) {
+            this.selectedFiles.splice(index, 1);
+
+            // Update the file input
+            const dt = new DataTransfer();
+            this.selectedFiles.forEach(f => dt.items.add(f));
+            this.$refs.fileInput.files = dt.files;
+        },
+
+        formatSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
     }
 }
 

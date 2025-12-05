@@ -184,6 +184,125 @@ class AIService:
         except Exception as e:
             raise Exception(f"AI generation failed: {str(e)}")
 
+    async def generate_social_post_from_image(
+        self,
+        business_name: str,
+        industry: str,
+        location: str,
+        image_url: str,
+        content_type: str = "general",
+        brand_voice: Optional[str] = None,
+        notes: Optional[str] = None,
+    ) -> Dict[str, any]:
+        """
+        Generate social media post by analyzing an uploaded image using vision AI.
+
+        Args:
+            business_name: Name of the business
+            industry: Business industry (e.g., "landscaping", "HVAC")
+            location: Business location (e.g., "Mount Kisco, NY")
+            image_url: URL of the image to analyze
+            content_type: Type of content
+            brand_voice: Custom brand voice instructions
+            notes: Additional notes or context
+
+        Returns:
+            Dict with 'caption', 'hashtags', and 'cta'
+        """
+
+        # Return demo content if AI is not available
+        if not self.client:
+            return {
+                "caption": f"[DEMO] Check out this amazing work from {business_name} in {location}!",
+                "hashtags": ["#localbusiness", f"#{industry}", f"#{location.replace(' ', '').replace(',', '')}"],
+                "cta": f"Contact {business_name} today!"
+            }
+
+        # Build vision prompt
+        voice_instruction = (
+            f"Brand voice: {brand_voice}" if brand_voice else "Confident, practical, conversational."
+        )
+        notes_instruction = f"Special notes: {notes}" if notes else ""
+
+        city = location.split(',')[0].strip() if ',' in location else location
+        state = location.split(',')[-1].strip() if ',' in location else ""
+
+        vision_prompt = f"""Analyze this image and write a compelling social media post for {business_name}, a {industry} business in {city}, {state}.
+
+{voice_instruction}
+{notes_instruction}
+
+IMPORTANT INSTRUCTIONS:
+1. Describe what you see in the image (the work, service, or product shown)
+2. Write as if you're the business owner - first person, authentic, proud of your work
+3. Highlight the value/benefit visible in the image
+4. Include a location reference to {city}, {state}
+5. Keep it conversational and human - NOT marketing-speak
+6. Be specific about what's shown - mention details you can see
+
+Format your response EXACTLY like this:
+
+CAPTION:
+[Your 100-150 word caption here]
+
+HASHTAGS:
+[5-10 relevant hashtags, comma-separated]
+
+CTA:
+[Call-to-action text]"""
+
+        try:
+            # Use vision with Claude/GPT-4V
+            if self.provider in ["OpenRouter", "Gemini"]:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": vision_prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": image_url}
+                                }
+                            ]
+                        }
+                    ],
+                    temperature=0.8,
+                    max_tokens=600,
+                )
+
+                content = response.choices[0].message.content
+                parsed = self._parse_social_response(content)
+                return parsed
+
+            else:
+                # OpenAI GPT-4V
+                response = await self.client.chat.completions.create(
+                    model="gpt-4-vision-preview",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": vision_prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": image_url}
+                                }
+                            ]
+                        }
+                    ],
+                    temperature=0.7,
+                    max_tokens=600,
+                )
+
+                content = response.choices[0].message.content
+                parsed = self._parse_social_response(content)
+                return parsed
+
+        except Exception as e:
+            raise Exception(f"Image analysis failed: {str(e)}")
+
     async def generate_blog_post(
         self,
         business_name: str,
@@ -703,57 +822,63 @@ Style: {style_modifier}"""
         content_format: str = "social",
     ) -> List[Dict[str, str]]:
         """
-        Generate content topic ideas for a business.
+        Generate complete social media posts ready to publish.
 
         Args:
             business_name: Name of the business
             industry: Business industry
             location: Business location
             brand_voice: Optional brand voice/tone
-            num_ideas: Number of ideas to generate
-            keyword: Optional keyword/topic to focus ideas around
+            num_ideas: Number of posts to generate
+            keyword: Optional keyword/topic to focus posts around
             content_format: "social" for social media posts or "blog" for blog articles
 
         Returns:
-            List of dicts with 'topic', 'content_type', and 'description'
+            List of dicts with 'topic', 'content_type', 'caption', 'hashtags', and 'cta'
         """
 
-        # Return demo ideas if OpenAI is not available
+        # Return demo posts if OpenAI is not available
         if not self.client:
             return [
                 {
                     "topic": f"[DEMO] 5 Signs You Need {industry} Services",
                     "content_type": "tip",
-                    "description": "Educational post about common issues customers face"
+                    "caption": f"🚨 5 Signs You Need Professional {industry} Services:\n\n1. You're spending too much time on tasks outside your expertise\n2. Your DIY attempts aren't getting the results you want\n3. You need expert guidance to reach your goals\n4. You want to save time and reduce stress\n5. You're ready to invest in quality results\n\nSound familiar? We're here to help! 💪",
+                    "hashtags": "#LocalBusiness #ProfessionalServices #SmallBusiness #LocalExperts",
+                    "cta": "Ready to get started? Contact us today for a free consultation!"
                 },
                 {
                     "topic": f"[DEMO] Behind the Scenes at {business_name}",
                     "content_type": "team_update",
-                    "description": "Show your team at work to build trust"
+                    "caption": f"Ever wonder what goes on behind the scenes at {business_name}? 👀\n\nToday we're giving you a peek into our daily operations! Our team is hard at work delivering exceptional {industry} services to the {location} community.\n\nFrom morning coffee to late afternoon project wrap-ups, every moment is dedicated to serving you better. ☕✨\n\nWe love what we do, and it shows in the results! 🎯",
+                    "hashtags": "#BehindTheScenes #TeamWork #LocalBusiness #CommunityFirst",
+                    "cta": "Want to see more behind-the-scenes content? Follow us for daily updates!"
                 },
                 {
                     "topic": f"[DEMO] Customer Success Story from {location}",
                     "content_type": "testimonial",
-                    "description": "Share a recent happy customer experience"
+                    "caption": f"⭐⭐⭐⭐⭐ SUCCESS STORY ⭐⭐⭐⭐⭐\n\nWe recently helped a local {location} business transform their {industry} approach, and the results speak for themselves!\n\n\"Working with {business_name} was the best decision we made. Their expertise and dedication made all the difference!\" - Happy Customer\n\nYour success is our success! 🙌\n\nReady to write your own success story?",
+                    "hashtags": "#CustomerSuccess #Testimonial #LocalSuccess #HappyCustomers",
+                    "cta": "Join our growing list of satisfied clients! Book your consultation now."
                 },
             ]
 
         # Build keyword context
         keyword_context = ""
         if keyword:
-            keyword_context = f"\n**IMPORTANT: All ideas MUST be related to or incorporate this keyword/topic: {keyword}**\n"
+            keyword_context = f"\n**IMPORTANT: All posts MUST be related to or incorporate this keyword/topic: {keyword}**\n"
         
         # Content format specific instructions
         if content_format == "blog":
-            format_instruction = "blog articles (600-800 words)"
+            format_instruction = "blog article ideas (we'll generate the full article later)"
             content_types = "how_to_guide, listicle, case_study, industry_news, educational, comparison, ultimate_guide"
-            description_note = "Brief outline of article structure and key points to cover"
+            caption_note = "Brief outline of article structure (150-200 words)"
         else:
-            format_instruction = "social media posts"
+            format_instruction = "complete social media posts ready to publish"
             content_types = "before_after, testimonial, offer, tip, team_update, project_showcase, seasonal, other"
-            description_note = "Brief description of what the post would cover"
+            caption_note = "Full social media caption (150-250 characters, engaging, with emojis)"
         
-        prompt = f"""Generate {num_ideas} content topic ideas for {format_instruction}.
+        prompt = f"""Generate {num_ideas} {format_instruction}.
 
 Business: {business_name}
 Industry: {industry}
@@ -761,32 +886,48 @@ Location: {location}
 {f'Brand Voice: {brand_voice}' if brand_voice else ''}
 {keyword_context}
 
-For each idea, provide:
-1. A specific, engaging topic title{' related to "' + keyword + '"' if keyword else ''}
+For each post, provide:
+1. A catchy topic/title{' related to "' + keyword + '"' if keyword else ''}
 2. Content type (choose from: {content_types})
-3. {description_note}
+3. {caption_note}
+4. 4-6 relevant hashtags (space-separated, including location-based tags)
+5. A compelling call-to-action (CTA)
+
+IMPORTANT FORMATTING RULES:
+- Caption should be clean text with emojis - NO HASHTAGS in the caption
+- Hashtags go in a separate HASHTAGS section only
+- Keep caption conversational, engaging, and ready to post
+- CTA should be a clear next step for the audience
 
 Focus on:
 - Local relevance to {location}
-- {industry}-specific insights
+- {industry}-specific insights and expertise
 {f'- How {keyword} relates to the business and customers' if keyword else '- Mix of educational, promotional, and storytelling content'}
-- Timely and seasonal topics
+- Posts that drive engagement (likes, comments, shares)
 - Customer pain points and solutions
-{'- In-depth, evergreen content that provides real value' if content_format == 'blog' else '- Engaging, shareable content that drives interaction'}
+- Use emojis naturally to add personality
+- Make it conversational and authentic
+- NEVER use em dashes (—) - use regular hyphens (-) or split into sentences instead
 
 Format your response EXACTLY like this:
 
-IDEA 1:
-TOPIC: [Topic title]
+POST 1:
+TOPIC: [Catchy title/topic]
 TYPE: [content_type]
-DESCRIPTION: [Brief description]
+CAPTION: [Clean engaging caption with emojis - NO hashtags here]
+HASHTAGS: #tag1 #tag2 #tag3 #tag4
+CTA: [Compelling call-to-action]
 
-IDEA 2:
-TOPIC: [Topic title]
+POST 2:
+TOPIC: [Catchy title/topic]
 TYPE: [content_type]
-DESCRIPTION: [Brief description]
+CAPTION: [Clean engaging caption with emojis - NO hashtags here]
+HASHTAGS: #tag1 #tag2 #tag3 #tag4
+CTA: [Compelling call-to-action]
 
-(Continue for all {num_ideas} ideas)
+(Continue for all {num_ideas} posts)
+
+REMEMBER: Keep captions clean - hashtags belong ONLY in the HASHTAGS section!
 """
 
         try:
@@ -795,48 +936,80 @@ DESCRIPTION: [Brief description]
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a creative social media strategist helping local businesses generate engaging content ideas.",
+                        "content": "You are a creative social media strategist helping local businesses generate engaging, ready-to-publish content.",
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.8,  # Higher temperature for more creative ideas
-                max_tokens=1500,
+                temperature=0.8,  # Higher temperature for more creative content
+                max_tokens=3000,  # More tokens for complete posts
             )
 
             content = response.choices[0].message.content
-            ideas = self._parse_ideas_response(content)
+            posts = self._parse_posts_response(content)
 
-            return ideas
+            return posts
 
         except Exception as e:
-            raise Exception(f"Content ideas generation failed: {str(e)}")
+            raise Exception(f"Content generation failed: {str(e)}")
 
-    def _parse_ideas_response(self, content: str) -> List[Dict[str, str]]:
-        """Parse AI response for content ideas."""
+    def _parse_posts_response(self, content: str) -> List[Dict[str, str]]:
+        """Parse AI response for complete social media posts."""
         lines = content.strip().split("\n")
 
-        ideas = []
-        current_idea = {}
+        posts = []
+        current_post = {}
+        current_field = None
+        multiline_content = []
 
         for line in lines:
-            line = line.strip()
+            line_stripped = line.strip()
 
-            if line.startswith("IDEA"):
-                if current_idea:
-                    ideas.append(current_idea)
-                current_idea = {}
-            elif line.startswith("TOPIC:"):
-                current_idea["topic"] = line.replace("TOPIC:", "").strip()
-            elif line.startswith("TYPE:"):
-                current_idea["content_type"] = line.replace("TYPE:", "").strip()
-            elif line.startswith("DESCRIPTION:"):
-                current_idea["description"] = line.replace("DESCRIPTION:", "").strip()
+            if line_stripped.startswith("POST"):
+                # Save previous post if it exists
+                if current_post:
+                    # Save any pending multiline content
+                    if current_field and multiline_content:
+                        current_post[current_field] = " ".join(multiline_content)
+                    if "topic" in current_post:  # Only add if has required fields
+                        posts.append(current_post)
+                current_post = {}
+                current_field = None
+                multiline_content = []
+            elif line_stripped.startswith("TOPIC:"):
+                current_post["topic"] = line_stripped.replace("TOPIC:", "").strip()
+                current_field = None
+            elif line_stripped.startswith("TYPE:"):
+                current_post["content_type"] = line_stripped.replace("TYPE:", "").strip()
+                current_field = None
+            elif line_stripped.startswith("CAPTION:"):
+                caption_text = line_stripped.replace("CAPTION:", "").strip()
+                if caption_text:
+                    multiline_content = [caption_text]
+                else:
+                    multiline_content = []
+                current_field = "caption"
+            elif line_stripped.startswith("HASHTAGS:"):
+                # Save any pending multiline content
+                if current_field == "caption" and multiline_content:
+                    current_post["caption"] = " ".join(multiline_content)
+                    multiline_content = []
+                current_post["hashtags"] = line_stripped.replace("HASHTAGS:", "").strip()
+                current_field = None
+            elif line_stripped.startswith("CTA:"):
+                current_post["cta"] = line_stripped.replace("CTA:", "").strip()
+                current_field = None
+            elif line_stripped and current_field == "caption":
+                # Continue multiline caption
+                multiline_content.append(line_stripped)
 
-        # Add last idea
-        if current_idea:
-            ideas.append(current_idea)
+        # Add last post
+        if current_post:
+            if current_field and multiline_content:
+                current_post[current_field] = " ".join(multiline_content)
+            if "topic" in current_post:
+                posts.append(current_post)
 
-        return ideas
+        return posts
 
     async def analyze_image_for_post(
         self,

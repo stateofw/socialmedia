@@ -13,6 +13,16 @@ from app.api.routes import admin, signup, client_ui
 # Templates
 templates = Jinja2Templates(directory="app/templates")
 
+# Add custom Jinja2 filters
+def number_format(value):
+    """Format number with commas for thousands."""
+    try:
+        return f"{int(value):,}"
+    except (ValueError, TypeError):
+        return value
+
+templates.env.filters["number_format"] = number_format
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

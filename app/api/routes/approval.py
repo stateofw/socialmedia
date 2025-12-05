@@ -219,26 +219,71 @@ async def publish_approved_content(content_id: int, client_id: int):
                 "google_business": "gmb",
             }
 
+            # Build full post text with caption, hashtags, and CTA
+            def build_post_text(platform):
+                """Build complete post text for a platform"""
+                parts = []
+                
+                # Add caption
+                if content.caption:
+                    parts.append(content.caption)
+                
+                # Add CTA
+                if content.cta:
+                    parts.append(f"\n{content.cta}")
+                
+                # Add hashtags (for platforms that support them)
+                if content.hashtags and platform in ["instagram", "twitter", "linkedin", "facebook"]:
+                    hashtag_string = " ".join([f"#{tag}" for tag in content.hashtags])
+                    parts.append(f"\n\n{hashtag_string}")
+                
+                return "\n".join(parts) if parts else content.topic
+
+            # Prepare media URLs for Publer
+            media_urls = content.media_urls or []
+
             # Use platform_captions if available, otherwise use base caption
             if content.platform_captions:
                 for platform, caption_text in content.platform_captions.items():
                     publer_platform = platform_map.get(platform, platform)
-                    content_dict[publer_platform] = {
-                        "type": "status",
+                    
+                    post_config = {
                         "text": caption_text,
                     }
+                    
+                    # Add media if available
+                    if media_urls:
+                        post_config["type"] = "photo" if media_urls else "status"
+                        post_config["media"] = [{"url": url} for url in media_urls]
+                    else:
+                        post_config["type"] = "status"
+                    
+                    content_dict[publer_platform] = post_config
             else:
                 # Fallback: use base caption for all platforms
-                base_text = content.caption or content.topic
                 for platform in content.platforms or []:
                     publer_platform = platform_map.get(platform, platform)
-                    content_dict[publer_platform] = {
-                        "type": "status",
-                        "text": base_text,
+                    
+                    post_config = {
+                        "text": build_post_text(platform),
                     }
+                    
+                    # Add media if available
+                    if media_urls:
+                        post_config["type"] = "photo"
+                        post_config["media"] = [{"url": url} for url in media_urls]
+                    else:
+                        post_config["type"] = "status"
+                    
+                    content_dict[publer_platform] = post_config
 
             if not content_dict:
                 raise Exception("No platforms configured")
+            
+            print(f"📷 Media URLs: {media_urls}")
+            print(f"📝 Caption: {content.caption[:100] if content.caption else 'None'}...")
+            print(f"🏷️  Hashtags: {content.hashtags}")
+            print(f"📣 CTA: {content.cta}")
 
             print(f"📝 Scheduling to platforms: {list(content_dict.keys())}")
             print(f"📅 Scheduled time: {content.scheduled_at}")

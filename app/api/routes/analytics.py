@@ -139,3 +139,59 @@ async def get_analytics_summary(
             "period_days": days,
         }
     }
+
+
+@router.get("/engagement")
+async def get_engagement_metrics(
+    client_id: Optional[int] = Query(default=None, description="Filter by client ID"),
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to analyze"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get real engagement metrics from Publer API.
+
+    Returns:
+    - Total and average likes, comments, shares
+    - Total and average impressions, reach
+    - Engagement rate
+    - Posts analyzed count
+    """
+
+    metrics = await analytics_service.get_engagement_metrics(
+        db=db,
+        client_id=client_id,
+        days=days,
+    )
+
+    return {
+        "success": True,
+        "data": metrics,
+    }
+
+
+@router.get("/top-posts")
+async def get_top_performing_posts(
+    client_id: Optional[int] = Query(default=None, description="Filter by client ID"),
+    limit: int = Query(default=10, ge=1, le=50, description="Number of posts to return"),
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to analyze"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get top performing posts based on engagement.
+
+    Returns:
+    - List of posts sorted by total engagement
+    - Each post includes metrics: likes, comments, shares, impressions, reach
+    """
+
+    posts = await analytics_service.get_top_performing_posts(
+        db=db,
+        client_id=client_id,
+        limit=limit,
+        days=days,
+    )
+
+    return {
+        "success": True,
+        "data": posts,
+    }
